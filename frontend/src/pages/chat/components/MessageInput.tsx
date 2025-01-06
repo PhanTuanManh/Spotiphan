@@ -2,10 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useChatStore } from "@/stores/useChatStore";
 import { useUser } from "@clerk/clerk-react";
-import data, { BaseEmoji } from "@emoji-mart/data";
+import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 import { Send } from "lucide-react";
 import { useState } from "react";
+
+type EmojiObject = {
+  native: string;
+};
 
 const MessageInput = () => {
   const [newMessage, setNewMessage] = useState("");
@@ -19,7 +23,7 @@ const MessageInput = () => {
     setNewMessage("");
   };
 
-  const addEmoji = (emoji: BaseEmoji) => {
+  const addEmoji = (emoji: EmojiObject) => {
     setNewMessage((prev) => prev + emoji.native);
   };
 
