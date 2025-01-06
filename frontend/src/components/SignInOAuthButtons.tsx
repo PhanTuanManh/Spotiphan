@@ -1,37 +1,34 @@
 import ReactDOM from "react-dom";
-import { useState } from "react";
+import { useState, ReactNode } from "react";
 import { SignIn, SignUp } from "@clerk/clerk-react";
 import { Button } from "./ui/button";
 import { Toaster } from "react-hot-toast";
 
-const SignInRegisterModal = () => {
-  const [isModalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState("login"); // "login" or "register"
+type ModalMode = "login" | "register";
 
-  const ModalContent = (
+const SignInRegisterModal: React.FC = () => {
+  const [isModalOpen, setModalOpen] = useState<boolean>(false);
+  const [modalMode, setModalMode] = useState<ModalMode>("login");
+
+  const ModalContent: ReactNode = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={() => setModalOpen(false)} // Close modal on overlay click
     >
-      {/* Prevent closing modal when clicking inside the modal content */}
       <div
         className="relative bg-card p-6 rounded-lg shadow-lg w-[95%] max-w-md z-10"
         onClick={(e) => e.stopPropagation()} // Stop propagation of clicks inside the modal
       >
         {modalMode === "login" ? (
-          <div>
-            <SignIn
-              afterSignInUrl={null} // No redirection
-              redirectUrl={null} // Handle email links or codes internally
-            />
-          </div>
+          <SignIn
+            afterSignInUrl={null} // No redirection
+            redirectUrl={null} // Handle email links or codes internally
+          />
         ) : (
-          <div>
-            <SignUp
-              afterSignUpUrl={null} // No redirection
-              redirectUrl={null} // Handle email verification internally
-            />
-          </div>
+          <SignUp
+            afterSignUpUrl={null} // No redirection
+            redirectUrl={null} // Handle email verification internally
+          />
         )}
       </div>
     </div>
@@ -46,7 +43,7 @@ const SignInRegisterModal = () => {
             setModalMode("login");
             setModalOpen(true);
           }}
-          variant="primary"
+          variant="default"
           className="w-full bg-primary text-primary-foreground h-11 rounded-lg shadow-md hover:bg-primary/90"
         >
           Login

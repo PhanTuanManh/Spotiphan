@@ -12,7 +12,7 @@ import { Calendar, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 // Custom Hook for Debouncing
-const useDebounce = (value, delay) => {
+const useDebounce = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ const useDebounce = (value, delay) => {
   return debouncedValue;
 };
 
-const removeDiacritics = (str) => {
+const removeDiacritics = (str: string) => {
   return str
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -74,7 +74,7 @@ const SongsTable = () => {
       <div className="mb-4">
         <input
           type="text"
-          placeholder="Tìm song..."
+          placeholder="Tìm Song..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full p-2 border border-zinc-800 rounded bg-zinc-900 text-zinc-100"
