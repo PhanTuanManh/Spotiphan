@@ -1,3 +1,5 @@
+// models/song.model.js
+
 import mongoose from "mongoose";
 
 const songSchema = new mongoose.Schema(
@@ -27,6 +29,7 @@ const songSchema = new mongoose.Schema(
 			ref: "Album",
 			required: false,
 		},
+		listenCount: { type: Number, default: 0 }, // Thêm trường này
 	},
 	{ timestamps: true }
 );

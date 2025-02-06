@@ -16,7 +16,7 @@ const HomePage = () => {
     isLoading,
     madeForYouSongs,
     featuredSongs,
-    trendingSongs,
+    trendingSongs,  
   } = useMusicStore();
 
   const { initializeQueue } = usePlayerStore();

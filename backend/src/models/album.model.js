@@ -1,3 +1,4 @@
+// models/album.model.js
 import mongoose from "mongoose";
 
 const albumSchema = new mongoose.Schema(

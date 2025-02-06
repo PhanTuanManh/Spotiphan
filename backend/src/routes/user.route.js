@@ -1,3 +1,5 @@
+// routes/user.route.js
+
 import { Router } from "express";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { getAllUsers, getMessages } from "../controller/user.controller.js";

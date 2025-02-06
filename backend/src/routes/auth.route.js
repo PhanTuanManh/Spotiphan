@@ -1,3 +1,5 @@
+// routes/auth.route.js
+
 import { Router } from "express";
 import { authCallback } from "../controller/auth.controller.js";
 

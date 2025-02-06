@@ -1,3 +1,5 @@
+// routes/album.route.js
+
 import { Router } from "express";
 import { getAlbumById, getAllAlbums } from "../controller/album.controller.js";
 

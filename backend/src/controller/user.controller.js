@@ -1,15 +1,16 @@
+// controllers/user.controller.js
+
 import { User } from "../models/user.model.js";
 import { Message } from "../models/message.model.js";
 
-export const getAllUsers = async (req, res, next) => {
-	try {
-		const currentUserId = req.auth.userId;
-		const users = await User.find({ clerkId: { $ne: currentUserId } });
-		res.status(200).json(users);
-	} catch (error) {
-		next(error);
-	}
-};
+export const getAllUsers = async (currentUserId, page = 1, limit = 10) => {
+	const skip = (page - 1) * limit;
+	const users = await User.find({ clerkId: { $ne: currentUserId } })
+	  .skip(skip)
+	  .limit(limit);
+	const total = await User.countDocuments({ clerkId: { $ne: currentUserId } });
+	return { users, total };
+  };
 
 export const getMessages = async (req, res, next) => {
 	try {

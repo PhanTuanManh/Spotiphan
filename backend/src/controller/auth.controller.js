@@ -1,3 +1,5 @@
+// controllers/auth.controller.js
+
 import { User } from "../models/user.model.js";
 
 export const authCallback = async (req, res, next) => {
