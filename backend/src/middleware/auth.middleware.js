@@ -1,4 +1,4 @@
-// middleware/auth.middleware.js
+// src/middleware/auth.middleware.js
 
 import { clerkClient } from "@clerk/express";
 

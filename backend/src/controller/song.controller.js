@@ -1,5 +1,6 @@
 import { Song } from "../models/song.model.js";
 import { UserListeningHistory } from "../models/userListeningHistory.model.js";
+import mongoose from "mongoose";
 
 // Lấy tất cả bài hát (có phân trang)
 export const getAllSongs = async (req, res, next) => {
@@ -28,22 +29,12 @@ export const getAllSongs = async (req, res, next) => {
   }
 };
 
-// Lấy bài hát nổi bật (6 bài hát ngẫu nhiên)
+// Lấy bài hát nổi bật (6 bài hát nổi bật)
 export const getFeaturedSongs = async (req, res, next) => {
   try {
-    const songs = await Song.aggregate([
-      { $sample: { size: 6 } },
-      {
-        $project: {
-          _id: 1,
-          title: 1,
-          artist: 1,
-          imageUrl: 1,
-          audioUrl: 1,
-          duration: 1,
-        },
-      },
-    ]);
+    const songs = await Song.find({ isFeatured: true })
+      .limit(6)
+      .select("title artist imageUrl audioUrl duration");
 
     res.status(200).json({ success: true, data: songs });
   } catch (error) {
@@ -54,10 +45,11 @@ export const getFeaturedSongs = async (req, res, next) => {
 // Lấy bài hát "Dành cho bạn" (dựa trên lịch sử nghe nhạc của người dùng)
 export const getMadeForYouSongs = async (req, res, next) => {
   try {
-    const userId = req.user._id; // Giả sử user ID được lấy từ middleware xác thực
+    const userId = req.auth.userId;
+    const MIN_HISTORY = 5; // Số bài hát tối thiểu trong lịch sử để đề xuất
 
-    // Lấy top 10 bài hát người dùng nghe nhiều nhất
-    const topSongs = await UserListeningHistory.aggregate([
+    // Bước 1: Lấy lịch sử nghe của người dùng
+    const userHistory = await UserListeningHistory.aggregate([
       { $match: { userId: mongoose.Types.ObjectId(userId) } },
       { $group: { _id: "$songId", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
@@ -83,11 +75,27 @@ export const getMadeForYouSongs = async (req, res, next) => {
       },
     ]);
 
+    // Bước 2: Nếu không đủ lịch sử, đề xuất bài hát phổ biến
+    if (userHistory.length < MIN_HISTORY) {
+      const popularSongs = await Song.find()
+        .sort({ listenCount: -1 })
+        .limit(10)
+        .select("title artist imageUrl audioUrl duration");
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          title: "Popular Songs",
+          songs: popularSongs,
+        },
+      });
+    }
+
     res.status(200).json({
       success: true,
       data: {
         title: "Made For You",
-        songs: topSongs,
+        songs: userHistory,
       },
     });
   } catch (error) {
@@ -95,21 +103,19 @@ export const getMadeForYouSongs = async (req, res, next) => {
   }
 };
 
-// Lấy bài hát thịnh hành (dựa trên số lượt nghe)
+// Lấy bài hát thịnh hành (dựa trên số lượt nghe trong 7 ngày gần nhất)
 export const getTrendingSongs = async (req, res, next) => {
   try {
-    const songs = await Song.find()
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const songs = await Song.find({
+      lastListenedAt: { $gte: sevenDaysAgo }, // Lọc bài hát được nghe trong 7 ngày qua
+    })
       .sort({ listenCount: -1 })
       .limit(10)
       .select("title artist imageUrl audioUrl duration");
 
-    res.status(200).json({
-      success: true,
-      data: {
-        title: "Trending Songs",
-        songs,
-      },
-    });
+    res.status(200).json({ success: true, data: songs });
   } catch (error) {
     next(error);
   }
