@@ -23,6 +23,7 @@ const userSchema = new mongoose.Schema(
 
         followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Những người theo dõi
         following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Người dùng đang theo dõi
+        isBlocked: { type: Boolean, default: false },
     },
     { timestamps: true }
 );
