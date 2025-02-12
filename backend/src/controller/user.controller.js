@@ -3,59 +3,6 @@ import { Message } from "../models/message.model.js";
 import { Payment } from "../models/payment.model.js";
 import { User } from "../models/user.model.js";
 
-/**
- * Create a new user (Admin only)
- */
-export const createUser = async (req, res, next) => {
-	try {
-		const { fullName, email, imageUrl, role } = req.body;
-
-		const existingUser = await User.findOne({ email });
-		if (existingUser) {
-			return res.status(400).json({ message: "User already exists" });
-		}
-
-		const newUser = new User({
-			fullName,
-			email,
-			imageUrl,
-			role,
-			clerkId: "manual-" + Date.now(), // Fake Clerk ID for manually created users
-		});
-
-		await newUser.save();
-		res.status(201).json(newUser);
-	} catch (error) {
-		next(error);
-	}
-};
-
-/**
- * Get all users (Admin only) with pagination
- */
-export const getAllUsers = async (req, res, next) => {
-	try {
-		let { page = 1, limit = 10 } = req.query;
-		page = parseInt(page);
-		limit = parseInt(limit);
-
-		const totalUsers = await User.countDocuments();
-		const users = await User.find()
-			.populate("subscriptionPlan")
-			.skip((page - 1) * limit)
-			.limit(limit)
-			.sort({ createdAt: -1 });
-
-		res.status(200).json({
-			totalUsers,
-			currentPage: page,
-			totalPages: Math.ceil(totalUsers / limit),
-			users,
-		});
-	} catch (error) {
-		next(error);
-	}
-};
 
 /**
  * Get user profile by ID
@@ -125,44 +72,6 @@ export const updateUserProfile = async (req, res, next) => {
 	}
 };
 
-/**
- * Delete a user (Admin only)
- */
-export const deleteUser = async (req, res, next) => {
-	try {
-		const { userId } = req.params;
-		const user = await User.findByIdAndDelete(userId);
-
-		if (!user) {
-			return res.status(404).json({ message: "User not found" });
-		}
-
-		res.status(200).json({ message: "User deleted successfully" });
-	} catch (error) {
-		next(error);
-	}
-};
-
-/**
- * Block/Unblock a user (Admin only)
- */
-export const toggleBlockUser = async (req, res, next) => {
-	try {
-		const { userId } = req.params;
-		const user = await User.findById(userId);
-
-		if (!user) {
-			return res.status(404).json({ message: "User not found" });
-		}
-
-		user.isBlocked = !user.isBlocked;
-		await user.save();
-
-		res.status(200).json({ message: `User ${user.isBlocked ? "blocked" : "unblocked"} successfully` });
-	} catch (error) {
-		next(error);
-	}
-};
 
 /**
  * Follow a user
@@ -290,3 +199,36 @@ export const getMessages = async (req, res, next) => {
 	}
 };
 
+/**
+ * Update user's subscription plan
+ */
+export const updateSubscriptionPlan = async (req, res, next) => {
+    try {
+        const myId = req.auth.userId; // ID người dùng hiện tại (được xác thực)
+        const { planId } = req.body; // ID của gói subscription mới
+
+        // Kiểm tra xem gói subscription có tồn tại không
+        const plan = await SubscriptionPlan.findById(planId);
+        if (!plan) {
+            return res.status(404).json({ message: "Subscription plan not found" });
+        }
+
+        // Tìm user và cập nhật gói subscription + ngày hết hạn
+        const user = await User.findOneAndUpdate(
+            { clerkId: myId },
+            {
+                subscriptionPlan: plan._id,
+                premiumExpiration: new Date(Date.now() + plan.durationInDays * 24 * 60 * 60 * 1000),
+            },
+            { new: true }
+        ).populate("subscriptionPlan");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json({ message: "Subscription updated successfully", user });
+    } catch (error) {
+        next(error);
+    }
+};

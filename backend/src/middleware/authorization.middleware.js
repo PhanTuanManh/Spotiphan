@@ -57,3 +57,11 @@ export const requireAdmin = async (req, res, next) => {
 		next(error);
 	}
 };
+
+export const requireArtist = async (req, res, next) => {
+    const user = await User.findById(req.auth.userId);
+    if (!user || user.role !== "artist") {
+        return res.status(403).json({ message: "Unauthorized - you must be an artist" });
+    }
+    next();
+};
