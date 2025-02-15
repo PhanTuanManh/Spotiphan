@@ -19,7 +19,7 @@ import authRoutes from "./routes/auth.route.js";
 import songRoutes from "./routes/song.route.js";
 import statRoutes from "./routes/stat.route.js";
 import userRoutes from "./routes/user.route.js";
-import playlistRoutes from "./routes/playlist.route.js";
+import playlistRoutes from "./routes/playList.route.js";
 
 dotenv.config();
 

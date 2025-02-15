@@ -5,6 +5,7 @@ import { User } from "../models/user.model.js";
 import cloudinary from "../lib/cloudinary.js";
 import { Album } from "../models/album.model.js";
 import { Song } from "../models/song.model.js";
+import { io } from "../lib/socket.js"; // WebSocket để gửi thông báo realtime
 
 // helper function for cloudinary uploads
 const uploadToCloudinary = async (file) => {
@@ -23,105 +24,125 @@ const uploadToCloudinary = async (file) => {
  * Get user profile by ID
  */
 export const getUserProfile = async (req, res, next) => {
-	try {
-		const { userId } = req.params;
-		const user = await User.findById(userId)
-			.populate("subscriptionPlan")
-			.populate("likedSongs")
-			.populate("followers")
-			.populate("following");
+    try {
+        const { userId } = req.params;
+        const user = await User.findById(userId)
+            .populate("subscriptionPlan")
+            .populate("likedSongs")
+            .populate("followers")
+            .populate("following");
 
-		if (!user) {
-			return res.status(404).json({ message: "User not found" });
-		}
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
 
-		res.status(200).json(user);
-	} catch (error) {
-		next(error);
-	}
+        if (user.isBlocked) {
+            return res.status(403).json({ message: "This user is blocked" });
+        }
+
+        res.status(200).json(user);
+    } catch (error) {
+        next(error);
+    }
 };
+
 
 /**
  * Get current authenticated user profile
  */
 export const getMe = async (req, res, next) => {
-	try {
-		const myId = req.auth.userId;
-		const user = await User.findOne({ clerkId: myId })
-			.populate("subscriptionPlan")
-			.populate("likedSongs")
-			.populate("followers")
-			.populate("following");
+    try {
+        const myId = req.auth.userId;
+        const user = await User.findOne({ clerkId: myId })
+            .populate("subscriptionPlan")
+            .populate("likedSongs")
+            .populate("followers")
+            .populate("following");
 
-		if (!user) {
-			return res.status(404).json({ message: "User not found" });
-		}
+        if (!user) {
+            return res.status(404).json({ message: "User not found. Please register first." });
+        }
 
-		res.status(200).json(user);
-	} catch (error) {
-		next(error);
-	}
+        res.status(200).json(user);
+    } catch (error) {
+        next(error);
+    }
 };
+
 
 /**
  * Update user profile
  */
 export const updateUserProfile = async (req, res, next) => {
-	try {
-		const myId = req.auth.userId;
-		const { fullName, imageUrl } = req.body;
+    try {
+        const myId = req.auth.userId;
+        const { fullName, imageUrl } = req.body;
 
-		const updatedUser = await User.findOneAndUpdate(
-			{ clerkId: myId },
-			{ fullName, imageUrl },
-			{ new: true }
-		);
+        if (imageUrl && !imageUrl.startsWith("http")) {
+            return res.status(400).json({ message: "Invalid image URL" });
+        }
 
-		if (!updatedUser) {
-			return res.status(404).json({ message: "User not found" });
-		}
+        const updatedUser = await User.findOneAndUpdate(
+            { clerkId: myId },
+            { fullName, imageUrl },
+            { new: true }
+        );
 
-		res.status(200).json(updatedUser);
-	} catch (error) {
-		next(error);
-	}
+        if (!updatedUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json(updatedUser);
+    } catch (error) {
+        next(error);
+    }
 };
+
 
 
 /**
  * Follow a user
  */
+
 export const followUser = async (req, res, next) => {
-	try {
-		const myId = req.auth.userId;
-		const { userId } = req.params;
+    try {
+        const myId = req.auth.userId;
+        const { userId } = req.params;
 
-		if (myId === userId) {
-			return res.status(400).json({ message: "You cannot follow yourself" });
-		}
+        if (myId === userId) {
+            return res.status(400).json({ message: "You cannot follow yourself" });
+        }
 
-		const user = await User.findById(userId);
-		const me = await User.findOne({ clerkId: myId });
+        const user = await User.findById(userId);
+        const me = await User.findOne({ clerkId: myId });
 
-		if (!user || !me) {
-			return res.status(404).json({ message: "User not found" });
-		}
+        if (!user || !me) {
+            return res.status(404).json({ message: "User not found" });
+        }
 
-		if (me.following.includes(userId)) {
-			return res.status(400).json({ message: "You are already following this user" });
-		}
+        if (user.isBlocked) {
+            return res.status(403).json({ message: "This user is blocked" });
+        }
 
-		me.following.push(userId);
-		user.followers.push(me._id);
+        if (me.following.includes(userId)) {
+            return res.status(400).json({ message: "You are already following this user" });
+        }
 
-		await me.save();
-		await user.save();
+        me.following.push(userId);
+        user.followers.push(me._id);
 
-		res.status(200).json({ message: "Followed successfully" });
-	} catch (error) {
-		next(error);
-	}
+        await me.save();
+        await user.save();
+
+        // Gửi thông báo realtime
+        io.emit("new_follower", { userId: user._id, followerId: me._id });
+
+        res.status(200).json({ message: "Followed successfully" });
+    } catch (error) {
+        next(error);
+    }
 };
+
 
 /**
  * Unfollow a user
@@ -154,21 +175,26 @@ export const unfollowUser = async (req, res, next) => {
  * Get user's payment history
  */
 export const getPaymentHistory = async (req, res, next) => {
-	try {
-		const myId = req.auth.userId;
-		const user = await User.findOne({ clerkId: myId });
+    try {
+        const myId = req.auth.userId;
+        const user = await User.findOne({ clerkId: myId });
 
-		if (!user) {
-			return res.status(404).json({ message: "User not found" });
-		}
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
 
-		const payments = await Payment.find({ userId: user._id }).populate("planId");
+        const payments = await Payment.find({ userId: user._id }).populate("planId");
 
-		res.status(200).json(payments);
-	} catch (error) {
-		next(error);
-	}
+        if (payments.length === 0) {
+            return res.status(404).json({ message: "No payment history found" });
+        }
+
+        res.status(200).json(payments);
+    } catch (error) {
+        next(error);
+    }
 };
+
 
 /**
  * Get paginated messages between two users (optimized for chat apps)

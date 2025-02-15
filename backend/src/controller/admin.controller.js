@@ -294,14 +294,25 @@ export const createSubscriptionPlan = async (req, res, next) => {
 };
 
 export const deleteSubscriptionPlan = async (req, res, next) => {
-	try {
-		const { id } = req.params;
-		await SubscriptionPlan.findByIdAndDelete(id);
-		res.status(200).json({ message: "Subscription plan deleted successfully" });
-	} catch (error) {
-		next(error);
-	}
+    try {
+        const { id } = req.params;
+
+        // Kiểm tra nếu có user đang sử dụng gói này
+        const usersUsingPlan = await User.countDocuments({ subscriptionPlan: id });
+
+        if (usersUsingPlan > 0) {
+            return res.status(400).json({
+                message: "Cannot delete this subscription plan because users are currently using it.",
+            });
+        }
+
+        await SubscriptionPlan.findByIdAndDelete(id);
+        res.status(200).json({ message: "Subscription plan deleted successfully" });
+    } catch (error) {
+        next(error);
+    }
 };
+
 
 export const updateSubscriptionPlan = async (req, res, next) => {
 	try {
@@ -335,6 +346,10 @@ export const createPublicPlaylist = async (req, res) => {
     try {
         const { name, songIds } = req.body;
         const userId = req.auth.userId; // Admin ID
+
+		if (songIds.length > 50) {
+            return res.status(400).json({ message: "A playlist can have a maximum of 50 songs." });
+        }
 
         // Kiểm tra bài hát có hợp lệ không
         const approvedSongs = await Song.find({ _id: { $in: songIds }, status: "approved" });
@@ -372,6 +387,16 @@ export const createAdvertisement = async (req, res, next) => {
 export const deleteAdvertisement = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const ad = await Advertisement.findById(id);
+
+        if (!ad) {
+            return res.status(404).json({ message: "Advertisement not found" });
+        }
+
+        if (new Date() < new Date(ad.endDate)) {
+            return res.status(400).json({ message: "Cannot delete an active advertisement" });
+        }
+
         await Advertisement.findByIdAndDelete(id);
         res.status(200).json({ message: "Advertisement deleted successfully" });
     } catch (error) {
