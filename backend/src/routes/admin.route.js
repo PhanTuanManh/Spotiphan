@@ -1,28 +1,39 @@
-// routes/admin.route.js
+// src/routes/admin.routes.js
 
 import { Router } from "express";
-import { checkAdmin, createAlbum, createSong, createSubscriptionPlan, createUser, deleteAlbum, deleteSong, deleteSubscriptionPlan, deleteUser, getAllSubscriptionPlans, getAllUsers, toggleBlockUser, updateSubscriptionPlan } from "../controller/admin.controller.js";
-import { protectRoute, requireAdmin } from "../middleware/auth.middleware.js";
+import { approveAlbum, approveSingleOrEP, createAdvertisement, createPublicPlaylist, createSubscriptionPlan, createUser, deleteAdvertisement, deleteAlbum, deleteSubscriptionPlan, deleteUser, getAllAlbums, getAllSinglesOrEPs, getAllSubscriptionPlans, getAllUsers, rejectAlbum, rejectSingleOrEP, toggleBlockUser, updateSubscriptionPlan } from "../controller/admin.controller.js";
+import { requireAdmin } from "../middleware/auth.middleware.js";
+
 const router = Router();
 
-router.use(protectRoute, requireAdmin);
+// **Quản lý Single/EP**
+router.put("/singles/:songId/approve", requireAdmin, approveSingleOrEP);
+router.put("/singles/:songId/reject", requireAdmin, rejectSingleOrEP);
+router.get("/singles", requireAdmin, getAllSinglesOrEPs);
 
-router.get("/check", checkAdmin);
+// **Quản lý Album**
+router.put("/albums/:albumId/approve", requireAdmin, approveAlbum);
+router.put("/albums/:albumId/reject", requireAdmin, rejectAlbum);
+router.delete("/albums/:albumId", requireAdmin, deleteAlbum);
+router.get("/albums", requireAdmin, getAllAlbums);
 
-router.post("/songs", createSong);
-router.delete("/songs/:id", deleteSong);
+// **Quản lý User**
+router.post("/users", requireAdmin, createUser);
+router.get("/users", requireAdmin, getAllUsers);
+router.delete("/users/:userId", requireAdmin, deleteUser);
+router.put("/users/:userId/toggle-block", requireAdmin, toggleBlockUser);
 
-router.post("/albums", createAlbum);
-router.delete("/albums/:id", deleteAlbum);
+// **Quản lý Subscription Plans**
+router.post("/subscriptions", requireAdmin, createSubscriptionPlan);
+router.delete("/subscriptions/:id", requireAdmin, deleteSubscriptionPlan);
+router.put("/subscriptions/:id", requireAdmin, updateSubscriptionPlan);
+router.get("/subscriptions", requireAdmin, getAllSubscriptionPlans);
 
-router.get("/users", getAllUsers);
-router.post("/users", createUser);
-router.post("/users/block/:id", toggleBlockUser);
-router.delete("/users/:id", deleteUser);
+// **Quản lý Playlist (Admin tạo Public Playlist)**
+router.post("/playlists/public", requireAdmin, createPublicPlaylist);
 
-router.get("/subscriptions", getAllSubscriptionPlans);
-router.post("/subscriptions", createSubscriptionPlan);
-router.patch("/subscriptions/:id", updateSubscriptionPlan);
-router.delete("/subscriptions/:id", deleteSubscriptionPlan);
+// **Quản lý Quảng cáo**
+router.post("/advertisements", requireAdmin, createAdvertisement);
+router.delete("/advertisements/:id", requireAdmin, deleteAdvertisement);
 
 export default router;

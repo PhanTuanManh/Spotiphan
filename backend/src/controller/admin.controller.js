@@ -1,183 +1,202 @@
 // controllers/admin.controller.js
 
 import cloudinary from "../lib/cloudinary.js";
+import { Advertisement } from "../models/advertisement.model.js";
 import { Album } from "../models/album.model.js";
 import { Playlist } from "../models/playList.model.js";
 import { Song } from "../models/song.model.js";
 import { SubscriptionPlan } from "../models/subscriptionPlan.model.js";
 import { User } from "../models/user.model.js";
 
-// helper function for cloudinary uploads
-const uploadToCloudinary = async (file) => {
-	try {
-		const result = await cloudinary.uploader.upload(file.tempFilePath, {
-			resource_type: "auto",
-		});
-		return result.secure_url;
-	} catch (error) {
-		console.log("Error in uploadToCloudinary", error);
-		throw new Error("Error uploading to cloudinary");
-	}
+
+// Todo: Single/EP logic API
+export const approveSingleOrEP = async (req, res) => {
+    try {
+        const { songId } = req.params;
+
+        // Tìm bài hát cần duyệt
+        const song = await Song.findById(songId);
+        if (!song) {
+            return res.status(404).json({ message: "Song not found" });
+        }
+
+        // Chỉ cho phép duyệt bài hát Single hoặc EP
+        if (!song.isSingle) {
+            return res.status(400).json({ message: "This song is part of an album. Approve the album instead." });
+        }
+
+        // Duyệt bài hát
+        song.status = "approved";
+        await song.save();
+
+        res.status(200).json({ message: "Single/EP approved successfully", song });
+    } catch (error) {
+        res.status(500).json({ message: "Error approving single/EP" });
+    }
 };
 
-/**
- * createSong
- */
-export const createSong = async (req, res, next) => {
-	try {
-		if (!req.files || !req.files.audioFile || !req.files.imageFile) {
-			return res.status(400).json({ message: "Please upload all files" });
-		}
+export const rejectSingleOrEP = async (req, res) => {
+    try {
+        const { songId } = req.params;
 
-		const { title, artist, albumId, duration } = req.body;
-		const audioFile = req.files.audioFile;
-		const imageFile = req.files.imageFile;
+        const song = await Song.findById(songId);
+        if (!song) {
+            return res.status(404).json({ message: "Song not found" });
+        }
 
-		const audioUrl = await uploadToCloudinary(audioFile);
-		const imageUrl = await uploadToCloudinary(imageFile);
+        if (!song.isSingle) {
+            return res.status(400).json({ message: "This song is part of an album. Reject the album instead." });
+        }
 
-		const song = new Song({
-			title,
-			artist,
-			audioUrl,
-			imageUrl,
-			duration,
-			albumId: albumId || null,
-		});
+        // Từ chối bài hát Single/EP
+        song.status = "rejected";
+        await song.save();
 
-		await song.save();
-
-		// if song belongs to an album, update the album's songs array
-		if (albumId) {
-			await Album.findByIdAndUpdate(albumId, {
-				$push: { songs: song._id },
-			});
-		}
-		res.status(201).json(song);
-	} catch (error) {
-		console.log("Error in createSong", error);
-		next(error);
-	}
+        res.status(200).json({ message: "Single/EP rejected successfully", song });
+    } catch (error) {
+        res.status(500).json({ message: "Error rejecting single/EP" });
+    }
 };
 
-export const deleteSong = async (req, res, next) => {
-	try {
-		const { id } = req.params;
+export const getAllSinglesOrEPs = async (req, res) => {
+    try {
+        let { page = 1, limit = 10 } = req.query;
 
-		const song = await Song.findById(id);
+        // Chuyển đổi kiểu dữ liệu
+        page = parseInt(page);
+        limit = parseInt(limit);
 
-		// if song belongs to an album, update the album's songs array
-		if (song.albumId) {
-			await Album.findByIdAndUpdate(song.albumId, {
-				$pull: { songs: song._id },
-			});
-		}
+        // Tính số lượng bài hát bỏ qua (skip)
+        const skip = (page - 1) * limit;
 
-		await Song.findByIdAndDelete(id);
+        // Lấy danh sách Single/EP, sắp xếp theo trạng thái chờ duyệt trước
+        const singles = await Song.find({ isSingle: true })
+            .populate("artist")
+            .sort({ 
+                status: 1,  // "pending" trước (theo bảng mã ASCII: pending < approved < rejected)
+                createdAt: -1 // Mới nhất trước
+            })
+            .skip(skip)
+            .limit(limit);
 
-		res.status(200).json({ message: "Song deleted successfully" });
-	} catch (error) {
-		console.log("Error in deleteSong", error);
-		next(error);
-	}
+        // Đếm tổng số bài hát Single/EP
+        const totalSingles = await Song.countDocuments({ isSingle: true });
+        const totalPages = Math.ceil(totalSingles / limit);
+
+        res.status(200).json({
+            page,
+            totalPages,
+            totalSingles,
+            limit,
+            singles,
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Error retrieving pending singles/EPs" });
+    }
 };
 
+
+// Todo: Album logic API
 export const approveAlbum = async (req, res) => {
     try {
         const { albumId } = req.params;
 
-        // Tìm album cần duyệt
         const album = await Album.findById(albumId);
-        if (!album) return res.status(404).json({ message: "Album không tồn tại" });
+        if (!album || album.status !== "pending") {
+            return res.status(404).json({ message: "Album not found or not pending approval" });
+        }
 
-        // Cập nhật trạng thái album
         album.status = "approved";
         await album.save();
 
-        // Cập nhật tất cả bài hát trong album thành "approved"
-        await Song.updateMany({ albumId: albumId }, { status: "approved" });
+        await Song.updateMany({ albumId: album._id }, { status: "approved" });
 
-        res.status(200).json({ message: "Album và tất cả bài hát đã được duyệt", album });
+        res.status(200).json({ message: "Album and all its songs approved successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Lỗi server", error });
+        res.status(500).json({ message: "Error approving album" });
     }
 };
 
-export const approveSong = async (req, res) => {
+
+export const rejectAlbum = async (req, res) => {
     try {
-        const { songId } = req.params;
+        const { albumId } = req.params;
 
-        const song = await Song.findByIdAndUpdate(songId, { status: "approved" }, { new: true });
+        const album = await Album.findById(albumId);
+        if (!album || album.status !== "pending") {
+            return res.status(404).json({ message: "Album not found or not pending approval" });
+        }
 
-        if (!song) return res.status(404).json({ message: "Bài hát không tồn tại" });
+        album.status = "rejected";
+        await album.save();
 
-        res.status(200).json({ message: "Bài hát đã được duyệt", song });
+        await Song.updateMany({ albumId: album._id }, { status: "rejected" });
+
+        res.status(200).json({ message: "Album and all its songs rejected successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Lỗi server", error });
+        res.status(500).json({ message: "Error rejecting album" });
     }
 };
 
 
-export const approveMultipleSongs = async (req, res) => {
+export const deleteAlbum = async (req, res) => {
     try {
-        const { songIds } = req.body; // Nhận danh sách ID bài hát từ request
+        const { albumId } = req.params;
 
-        // Cập nhật trạng thái tất cả các bài hát thành "approved"
-        const updatedSongs = await Song.updateMany(
-            { _id: { $in: songIds } },
-            { status: "approved" }
-        );
+        const album = await Album.findById(albumId);
+        if (!album) {
+            return res.status(404).json({ message: "Album not found" });
+        }
 
-        res.status(200).json({ message: `Đã duyệt ${updatedSongs.modifiedCount} bài hát` });
+        await Song.deleteMany({ albumId: album._id });
+
+        await Album.findByIdAndDelete(albumId);
+
+        res.status(200).json({ message: "Album and all its songs deleted successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Lỗi server", error });
+        res.status(500).json({ message: "Error deleting album" });
+    }
+};
+
+export const getAllAlbums = async (req, res) => {
+    try {
+        let { page = 1, limit = 10 } = req.query;
+
+        // Chuyển đổi kiểu dữ liệu
+        page = parseInt(page);
+        limit = parseInt(limit);
+
+        // Tính số lượng album bỏ qua (skip)
+        const skip = (page - 1) * limit;
+
+        // Lấy danh sách Album, sắp xếp theo trạng thái chờ duyệt trước
+        const albums = await Album.find()
+            .populate("artist")
+            .sort({ 
+                status: 1,  // "pending" trước, sau đó "approved", cuối cùng "rejected"
+                createdAt: -1 // Album mới nhất trước
+            })
+            .skip(skip)
+            .limit(limit);
+
+        // Đếm tổng số album
+        const totalAlbums = await Album.countDocuments();
+        const totalPages = Math.ceil(totalAlbums / limit);
+
+        res.status(200).json({
+            page,
+            totalPages,
+            totalAlbums,
+            limit,
+            albums,
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Error retrieving albums" });
     }
 };
 
 
-
-export const createAlbum = async (req, res, next) => {
-	try {
-		const { title, artist, releaseYear } = req.body;
-		const { imageFile } = req.files;
-
-		const imageUrl = await uploadToCloudinary(imageFile);
-
-		const album = new Album({
-			title,
-			artist,
-			imageUrl,
-			releaseYear,
-		});
-
-		await album.save();
-
-		res.status(201).json(album);
-	} catch (error) {
-		console.log("Error in createAlbum", error);
-		next(error);
-	}
-};
-
-export const deleteAlbum = async (req, res, next) => {
-	try {
-		const { id } = req.params;
-		await Song.deleteMany({ albumId: id });
-		await Album.findByIdAndDelete(id);
-		res.status(200).json({ message: "Album deleted successfully" });
-	} catch (error) {
-		console.log("Error in deleteAlbum", error);
-		next(error);
-	}
-};
-
-export const checkAdmin = async (req, res, next) => {
-	res.status(200).json({ admin: true }
-	)};
-
-/**
- * Create a new user 
- */
+// Todo: User logic API
 export const createUser = async (req, res, next) => {
 	
 		try {
@@ -203,9 +222,6 @@ export const createUser = async (req, res, next) => {
 		}
 };
 
-/**
- * Get all users  with pagination
- */
 export const getAllUsers = async (req, res, next) => {
 		try {
 			let { page = 1, limit = 10 } = req.query;
@@ -230,9 +246,6 @@ export const getAllUsers = async (req, res, next) => {
 		}
 	}
 
-/**
- * Delete a user 
- */
 export const deleteUser = async (req, res, next) => {
 	
 		try {
@@ -249,9 +262,6 @@ export const deleteUser = async (req, res, next) => {
 		}
 	}
 
-/**
- * Block/Unblock a user 
- */
 export const toggleBlockUser = async (req, res, next) => {
 	
 		try {
@@ -271,9 +281,7 @@ export const toggleBlockUser = async (req, res, next) => {
 		}
 	};
 
-/**
- * createSubscriptionPlan 
- */
+// Todo Subscription Plan Logic API
 export const createSubscriptionPlan = async (req, res, next) => {
 	try {
 		const { name, durationInDays, price } = req.body;
@@ -285,9 +293,6 @@ export const createSubscriptionPlan = async (req, res, next) => {
 	}
 };
 
-/**
- * deleteSubscriptionPlan 
- */
 export const deleteSubscriptionPlan = async (req, res, next) => {
 	try {
 		const { id } = req.params;
@@ -298,9 +303,6 @@ export const deleteSubscriptionPlan = async (req, res, next) => {
 	}
 };
 
-/**
- * updateSubscriptionPlan 
- */
 export const updateSubscriptionPlan = async (req, res, next) => {
 	try {
 		const { id } = req.params;
@@ -316,9 +318,6 @@ export const updateSubscriptionPlan = async (req, res, next) => {
 	}
 };
 
-/**
- * getAllSubscriptionPlans 
- */
 export const getAllSubscriptionPlans = async (req, res, next) => {
 	try {
 		const subscriptionPlans = await SubscriptionPlan.find();
@@ -328,7 +327,7 @@ export const getAllSubscriptionPlans = async (req, res, next) => {
 	}
 };
 
-
+// Todo: Playlist Logic API
 /**
  * Admin tạo Public Playlist
  */
@@ -355,5 +354,27 @@ export const createPublicPlaylist = async (req, res) => {
         res.status(201).json({ message: "Playlist công khai đã được tạo", playlist: newPlaylist });
     } catch (error) {
         res.status(500).json({ message: "Lỗi server", error });
+    }
+};
+
+// Todo: Advertisement Logic API
+export const createAdvertisement = async (req, res, next) => {
+    try {
+        const { title, mediaUrl, redirectUrl, duration } = req.body;
+        const newAd = new Advertisement({ title, mediaUrl, redirectUrl, duration });
+        await newAd.save();
+        res.status(201).json(newAd);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const deleteAdvertisement = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        await Advertisement.findByIdAndDelete(id);
+        res.status(200).json({ message: "Advertisement deleted successfully" });
+    } catch (error) {
+        next(error);
     }
 };

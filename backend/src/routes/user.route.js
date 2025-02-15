@@ -1,34 +1,37 @@
-// routes/user.route.js
 // src/routes/user.routes.js
 
-import { Router } from "express";
-import { followUser, getMe, getMessages, getPaymentHistory, getUserProfile, unfollowUser, updateSubscriptionPlan, updateUserProfile } from "../controller/user.controller.js";
+import express from "express";
 
 
-const router = Router();
+import { protectRoute } from "../middleware/auth.middleware.js";
+import { requirePremiumOrHigher, requireArtistOrAdmin } from "../middleware/authorization.middleware.js";
 
-// Lấy thông tin người dùng theo ID
-router.get("/:userId", getUserProfile);
+const router = express.Router();
 
-// Lấy thông tin cá nhân của người dùng hiện tại
-router.get("/me", getMe);
+// **Lấy thông tin User**
+router.get("/:userId", protectRoute, getUserProfile);
+router.get("/me", protectRoute, getMe);
+router.put("/me", protectRoute, updateUserProfile);
 
-// Cập nhật thông tin cá nhân
-router.put("/me", updateUserProfile);
+// **Follow / Unfollow**
+router.post("/:userId/follow", protectRoute, followUser);
+router.post("/:userId/unfollow", protectRoute, unfollowUser);
 
-// Theo dõi một người dùng khác
-router.post("/follow/:userId", followUser);
+// **Lịch sử thanh toán**
+router.get("/me/payments", protectRoute, getPaymentHistory);
 
-// Bỏ theo dõi một người dùng khác
-router.post("/unfollow/:userId", unfollowUser);
+// **Tin nhắn giữa hai người dùng**
+router.get("/:userId/messages", protectRoute, getMessages);
 
-// Lịch sử thanh toán của người dùng
-router.get("/me/payments", getPaymentHistory);
+// **Cập nhật gói Subscription**
+router.put("/me/subscription", protectRoute, updateSubscriptionPlan);
 
-// Lấy tin nhắn giữa hai người dùng
-router.get("/messages/:userId", getMessages);
+// **Quản lý Album (dành cho Artist)**
+router.post("/albums", protectRoute, requireArtistOrAdmin, createAlbum);
+router.put("/albums/:albumId/archive", protectRoute, requireArtistOrAdmin, archiveAlbum);
 
-// Cập nhật gói subscription
-router.put("/update-subscription", updateSubscriptionPlan);
+// **Quản lý bài hát (dành cho Artist)**
+router.post("/songs", protectRoute, requireArtistOrAdmin, createSong);
+router.put("/songs/:songId/archive", protectRoute, requireArtistOrAdmin, archiveSong);
 
 export default router;

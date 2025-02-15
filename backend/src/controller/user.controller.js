@@ -2,7 +2,22 @@
 import { Message } from "../models/message.model.js";
 import { Payment } from "../models/payment.model.js";
 import { User } from "../models/user.model.js";
+import cloudinary from "../lib/cloudinary.js";
+import { Album } from "../models/album.model.js";
+import { Song } from "../models/song.model.js";
 
+// helper function for cloudinary uploads
+const uploadToCloudinary = async (file) => {
+	try {
+		const result = await cloudinary.uploader.upload(file.tempFilePath, {
+			resource_type: "auto",
+		});
+		return result.secure_url;
+	} catch (error) {
+		console.log("Error in uploadToCloudinary", error);
+		throw new Error("Error uploading to cloudinary");
+	}
+};
 
 /**
  * Get user profile by ID
@@ -230,5 +245,125 @@ export const updateSubscriptionPlan = async (req, res, next) => {
         res.status(200).json({ message: "Subscription updated successfully", user });
     } catch (error) {
         next(error);
+    }
+};
+
+
+export const createAlbum = async (req, res, next) => {
+    try {
+        const { title, releaseYear } = req.body;
+        const { imageFile } = req.files;
+        const artistId = req.auth.userId; // Lấy ID từ auth middleware
+
+        // Kiểm tra người dùng có phải artist không
+        const artist = await User.findOne({ clerkId: artistId });
+        if (!artist || artist.role !== "artist") {
+            return res.status(403).json({ message: "Only artists can create albums" });
+        }
+
+        // Upload ảnh bìa lên Cloudinary
+        if (!imageFile) {
+            return res.status(400).json({ message: "Album cover image is required" });
+        }
+        const imageUrl = await uploadToCloudinary(imageFile);
+
+        // Tạo album mới
+        const album = new Album({
+            title,
+            artist: artist._id, // Liên kết với User (Artist)
+            imageUrl,
+            releaseYear,
+            status: "pending", // Mặc định album cần được admin duyệt
+        });
+
+        await album.save();
+
+        res.status(201).json({ message: "Album created successfully and is pending approval", album });
+    } catch (error) {
+        console.log("Error in createAlbum", error);
+        next(error);
+    }
+};
+
+export const archiveAlbum = async (req, res) => {
+    try {
+        const { albumId } = req.params;
+
+        const album = await Album.findById(albumId);
+        if (!album) {
+            return res.status(404).json({ message: "Album not found" });
+        }
+
+        album.status = "archived";
+        await album.save();
+        await Song.updateMany({ albumId: album._id }, { status: "archived" });
+
+        res.status(200).json({ message: "Album and all its songs archived successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Error archiving album" });
+    }
+};
+
+
+/**
+ * createSong
+ */
+export const createSong = async (req, res, next) => {
+    try {
+        if (!req.files || !req.files.audioFile || !req.files.imageFile) {
+            return res.status(400).json({ message: "Please upload all files" });
+        }
+
+        const { title, artist, albumId, duration } = req.body;
+        const audioFile = req.files.audioFile;
+        const imageFile = req.files.imageFile;
+
+        const audioUrl = await uploadToCloudinary(audioFile);
+        const imageUrl = await uploadToCloudinary(imageFile);
+
+        const isSingle = !albumId; // Nếu không có albumId, đây là một Single
+
+        const song = new Song({
+            title,
+            artist,
+            audioUrl,
+            imageUrl,
+            duration,
+            albumId: albumId || null,
+            isSingle
+        });
+
+        await song.save();
+
+        // Nếu bài hát thuộc album, cập nhật album
+        if (albumId) {
+            await Album.findByIdAndUpdate(albumId, {
+                $push: { songs: song._id }
+            });
+        }
+
+        res.status(201).json(song);
+    } catch (error) {
+        console.log("Error in createSong", error);
+        next(error);
+    }
+};
+
+export const archiveSong = async (req, res) => {
+    try {
+        const { songId } = req.params;
+
+        const song = await Song.findById(songId);
+        if (!song) {
+            return res.status(404).json({ message: "Song not found" });
+        }
+
+        song.status = "archived";
+        await song.save();
+
+        res.status(200).json({ message: "Song archived successfully" });
+
+    } catch (error) {
+        res.status(500).json({ message: "Error archiving song" });
     }
 };
