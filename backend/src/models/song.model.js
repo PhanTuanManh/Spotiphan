@@ -13,7 +13,6 @@ const songSchema = new mongoose.Schema(
         isFeatured: { type: Boolean, default: false },
         lastListenedAt: Date,
         likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Danh sách người dùng đã thích bài hát
-        category: { type: mongoose.Schema.Types.ObjectId, ref: "Category" }, // Thể loại của bài hát
         status: { type: String, enum: ["pending", "approved", "rejected", "archived"], default: "pending" },
         isSingle: { type: Boolean, default: false }
     },

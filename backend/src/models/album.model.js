@@ -8,7 +8,8 @@ const albumSchema = new mongoose.Schema(
 		imageUrl: { type: String, required: true },
 		releaseYear: { type: Number, required: true },
 		songs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Song" }],
-		status: { type: String, enum: ["pending", "approved", "rejected", "archived"], default: "pending" }
+		status: { type: String, enum: ["pending", "approved", "rejected", "archived"], default: "pending" },
+		category: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
 	},
 	{ timestamps: true }
 ); //  createdAt, updatedAt

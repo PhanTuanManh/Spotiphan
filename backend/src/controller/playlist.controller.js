@@ -1,5 +1,7 @@
+import { Category } from "../models/category.model.js";
 import { Playlist } from "../models/playList.model.js";
 import { Song } from "../models/song.model.js";
+import { User } from "../models/user.model.js";
 
 /**
  * @route POST /playlists
@@ -8,7 +10,7 @@ import { Song } from "../models/song.model.js";
  */
 export const createPlaylist = async (req, res, next) => {
     try {
-        const { name, isPublic, songIds = [] } = req.body;
+        const { name, isPublic, songIds = [], category = [] } = req.body;
         const userId = req.auth.userId;
         const isAdmin = req.auth.role === "admin"; 
 
@@ -23,6 +25,19 @@ export const createPlaylist = async (req, res, next) => {
             return res.status(400).json({ message: "Một số bài hát chưa được duyệt hoặc không tồn tại." });
         }
 
+        // Kiểm tra nếu user là Admin, mới được gán category
+        let validCategories = [];
+        if (isAdmin && category.length > 0) {
+            validCategories = await Category.find({ _id: { $in: category } });
+            if (validCategories.length !== category.length) {
+                return res.status(400).json({ message: "Some categories are invalid." });
+            }
+        } else {
+            if (category.length > 0) {
+                return res.status(403).json({ message: "Only admin can assign categories to playlists." });
+            }
+        }
+
         // Tạo Playlist
         const newPlaylist = new Playlist({
             name,
@@ -30,9 +45,19 @@ export const createPlaylist = async (req, res, next) => {
             isPublic: isAdmin ? true : isPublic || false,
             isAdminCreated: isAdmin,
             songs: songIds,
+            category: validCategories.map(c => c._id),
         });
 
         await newPlaylist.save();
+
+        // Cập nhật danh mục (Chỉ admin playlist mới cập nhật category)
+        if (isAdmin) {
+            await Category.updateMany(
+                { _id: { $in: category } },
+                { $push: { playlists: newPlaylist._id } }
+            );
+        }
+
         res.status(201).json({ message: "Playlist created successfully", playlist: newPlaylist });
     } catch (error) {
         next(error);
@@ -152,33 +177,63 @@ export const getPlaylistById = async (req, res, next) => {
  * @desc Cập nhật playlist (tên, trạng thái công khai)
  * @access Chủ sở hữu playlist
  */
+// comment vietnameses
 export const updatePlaylist = async (req, res, next) => {
     try {
         const { playlistId } = req.params;
-        const { name, isPublic } = req.body;
+        const { name, isPublic, category } = req.body;
         const userId = req.auth.userId;
 
+        // Lấy thông tin playlist
         const playlist = await Playlist.findById(playlistId);
-
         if (!playlist) {
-            return res.status(404).json({ message: "Playlist không tồn tại" });
+            return res.status(404).json({ message: "Playlist not found" });
         }
 
-        if (playlist.userId.toString() !== userId) {
-            return res.status(403).json({ message: "Bạn không có quyền cập nhật playlist này" });
+        // Chỉ admin hoặc chủ playlist mới có thể cập nhật
+        const user = await User.findById(userId);
+        if (playlist.userId.toString() !== userId && user.role !== "admin") {
+            return res.status(403).json({ message: "You do not have permission to update this playlist" });
         }
 
+        // Nếu có category, chỉ admin mới được thay đổi
+        let validCategories = [];
+        if (category && user.role === "admin") {
+            validCategories = await Category.find({ _id: { $in: category } });
+            if (validCategories.length !== category.length) {
+                return res.status(400).json({ message: "Some categories are invalid" });
+            }
+        } else if (category) {
+            return res.status(403).json({ message: "Only admin can change categories" });
+        }
+
+        // Cập nhật playlist
         playlist.name = name || playlist.name;
-        if (isPublic !== undefined) {
-            playlist.isPublic = isPublic;
+        playlist.isPublic = isPublic !== undefined ? isPublic : playlist.isPublic;
+        if (user.role === "admin") {
+            playlist.category = validCategories.map(c => c._id);
         }
 
         await playlist.save();
+
+        // Cập nhật danh mục nếu là admin
+        if (user.role === "admin") {
+            await Category.updateMany(
+                { _id: { $nin: category } },
+                { $pull: { playlists: playlist._id } }
+            );
+            await Category.updateMany(
+                { _id: { $in: category } },
+                { $push: { playlists: playlist._id } }
+            );
+        }
+
         res.status(200).json({ message: "Playlist updated successfully", playlist });
     } catch (error) {
         next(error);
     }
 };
+
 
 
 /**
@@ -192,16 +247,25 @@ export const deletePlaylist = async (req, res, next) => {
         const userId = req.auth.userId;
 
         const playlist = await Playlist.findById(playlistId);
-
         if (!playlist) {
-            return res.status(404).json({ message: "Playlist không tồn tại" });
+            return res.status(404).json({ message: "Playlist not found" });
         }
 
-        if (playlist.userId.toString() !== userId) {
-            return res.status(403).json({ message: "Bạn không có quyền xóa playlist này" });
+        // Chỉ cho phép chủ playlist hoặc admin xóa
+        const user = await User.findById(userId);
+        if (playlist.userId.toString() !== userId && user.role !== "admin") {
+            return res.status(403).json({ message: "You do not have permission to delete this playlist" });
         }
 
-        await playlist.deleteOne();
+        // Nếu là playlist admin, xóa khỏi danh mục
+        if (user.role === "admin") {
+            await Category.updateMany(
+                { playlists: playlistId },
+                { $pull: { playlists: playlistId } }
+            );
+        }
+
+        await playlist.remove();
         res.status(200).json({ message: "Playlist deleted successfully" });
     } catch (error) {
         next(error);
@@ -285,26 +349,28 @@ export const removeSongFromPlaylist = async (req, res, next) => {
  */
 export const getTrendingSongs = async (req, res, next) => {
     try {
-      const trendingPlaylist = await Playlist.findOne({ name: "Trending Songs" })
-        .populate({
-          path: "songs",
-          select: "title artist imageUrl audioUrl duration",
-          populate: { path: "artist", select: "fullName imageUrl" },
-        });
-  
-      if (!trendingPlaylist) {
-        return res.status(200).json({ success: true, message: "Trending Playlist chưa có sẵn." });
-      }
-  
-      if (trendingPlaylist.songs.length === 0) {
-        return res.status(200).json({ success: true, message: "Không có bài hát thịnh hành." });
-      }
-  
-      res.status(200).json({ success: true, data: trendingPlaylist });
+        const trendingPlaylist = await Playlist.findOne({ name: "Trending Songs" })
+            .populate({
+                path: "songs",
+                select: "title artist imageUrl audioUrl duration",
+                populate: { path: "artist", select: "fullName imageUrl" },
+            });
+
+        if (!trendingPlaylist) {
+            return res.status(200).json({ success: true, message: "Trending Playlist chưa có sẵn." });
+        }
+
+        if (trendingPlaylist.songs.length === 0) {
+            return res.status(200).json({ success: true, message: "Không có bài hát thịnh hành." });
+        }
+
+        res.status(200).json({ success: true, data: trendingPlaylist });
     } catch (error) {
-      next(error);
+        console.error("❌ Lỗi khi lấy Trending Playlist:", error);
+        next(error);
     }
-  };
+};
+
   
 
 /**

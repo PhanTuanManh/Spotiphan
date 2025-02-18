@@ -8,6 +8,7 @@ const playlistSchema = new mongoose.Schema(
         songs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Song" }],
         isPublic: { type: Boolean, default: false },
         followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Người dùng đã lưu playlist vào thư viện
+        category: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
     },
     { timestamps: true }
 );

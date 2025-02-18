@@ -49,8 +49,10 @@ export const trackSongListening = async (req, res, next) => {
             // Nếu chưa nghe bài hát này trước đó, thêm vào lịch sử
             await UserListeningHistory.create({ userId: mongoUserId, songId });
         }
+        song.listenCount += 1;
+        await song.save();
 
-        res.status(200).json({ message: "Lịch sử nghe nhạc đã được cập nhật" });
+        res.status(200).json({ message: "Lịch sử nghe nhạc đã được cập nhật & listenCount đã tăng" });
     } catch (error) {
         console.error("❌ Lỗi khi lưu lịch sử nghe nhạc:", error);
         next(error);
@@ -73,6 +75,13 @@ export const getListeningHistory = async (req, res, next) => {
         if (!user) return res.status(404).json({ message: "User không tồn tại" });
 
         const mongoUserId = user._id; // Lấy `ObjectId` từ MongoDB
+
+        let filter = { userId: mongoUserId };
+        if (startDate || endDate) {
+            filter.listenedAt = {};
+            if (startDate) filter.listenedAt.$gte = new Date(startDate);
+            if (endDate) filter.listenedAt.$lte = new Date(endDate);
+        }
 
         // Truy vấn lịch sử nghe nhạc
         const history = await UserListeningHistory.find({ userId: mongoUserId })
