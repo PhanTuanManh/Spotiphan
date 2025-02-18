@@ -1,8 +1,9 @@
-import { } from "../models/ .model.js";
+
 import { Album } from "../models/album.model.js";
 import { Playlist } from "../models/playList.model.js";
 import { Queue } from "../models/queue.model.js";
 import { Song } from "../models/song.model.js";
+import { User } from "../models/user.model.js";
 import { UserListeningHistory } from "../models/userListeningHistory.model.js";
 
 /**
@@ -11,6 +12,12 @@ import { UserListeningHistory } from "../models/userListeningHistory.model.js";
 export const cloneToQueue = async (req, res) => {
     try {
         const { userId, type, id } = req.body;
+
+        // Kiểm tra user có tồn tại không
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "Người dùng không tồn tại" });
+        }
 
         let source;
         if (type === "single") {
@@ -44,19 +51,28 @@ export const cloneToQueue = async (req, res) => {
             return res.status(400).json({ message: "Loại dữ liệu không hợp lệ" });
         }
 
-        if (!source || source.songs.length === 0) {
+        // Kiểm tra nếu Album/Playlist rỗng
+        if (!source || !source.songs || source.songs.length === 0) {
             return res.status(404).json({ message: `${type} không tồn tại hoặc không có bài hát nào` });
         }
 
+        // Lọc ra các bài hát hợp lệ (tránh lỗi nếu có bài hát đã bị xóa khỏi DB)
+        const validSongs = await Song.find({ _id: { $in: source.songs.map(song => song._id) } });
+
+        if (validSongs.length === 0) {
+            return res.status(404).json({ message: `${type} không có bài hát hợp lệ` });
+        }
+
+        // Xóa Queue cũ trước khi tạo mới
         await Queue.findOneAndDelete({ userId });
 
         const queue = new Queue({
             userId,
-            songs: source.songs.map(song => song._id),
+            songs: validSongs.map(song => song._id),
             currentIndex: 0,
             loopMode: "none",
             isShuffled: false,
-            originalOrder: source.songs.map(song => song._id),
+            originalOrder: validSongs.map(song => song._id),
         });
 
         await queue.save();
@@ -65,6 +81,7 @@ export const cloneToQueue = async (req, res) => {
         res.status(500).json({ error: `Lỗi khi tạo queue từ ${type}` });
     }
 };
+
 
 
 

@@ -3,12 +3,16 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatStore } from "@/stores/useChatStore";
 import { useAuth } from "@clerk/clerk-react";
 import { Loader } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 const updateApiToken = (token: string | null) => {
-  if (token)
+  if (token) {
     axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-  else delete axiosInstance.defaults.headers.common["Authorization"];
+    console.log("🔹 API Token Set:", token);
+  } else {
+    delete axiosInstance.defaults.headers.common["Authorization"];
+    console.log("❌ API Token Removed");
+  }
 };
 
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -17,29 +21,42 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { checkAdminStatus } = useAuthStore();
   const { initSocket, disconnectSocket } = useChatStore();
 
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const token = await getToken();
-        updateApiToken(token);
-        if (token) {
-          await checkAdminStatus();
-          // init socket
-          if (userId) initSocket(userId);
-        }
-      } catch (error: any) {
+  const initAuth = useCallback(async () => {
+    try {
+      const token = await getToken();
+      console.log("🔹 Clerk Token:", token); // ✅ Log token để debug
+      
+      if (!token) {
+        console.warn("⚠️ No token received from Clerk");
         updateApiToken(null);
-        console.log("Error in auth provider", error);
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
+      updateApiToken(token);
+      await checkAdminStatus();
+
+      if (userId) {
+        console.log("🔹 Initializing Socket for User:", userId);
+        initSocket(userId);
+      } else {
+        console.warn("⚠️ No userId found");
+      }
+    } catch (error: any) {
+      console.error("❌ Error in AuthProvider:", error);
+      updateApiToken(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [getToken, userId, checkAdminStatus, initSocket]);
+
+  useEffect(() => {
     initAuth();
 
-    // clean up
-    return () => disconnectSocket();
-  }, [getToken, userId, checkAdminStatus, initSocket, disconnectSocket]);
+    return () => {
+      console.log("🔹 Disconnecting Socket...");
+      disconnectSocket();
+    };
+  }, [initAuth, disconnectSocket]);
 
   if (loading)
     return (
@@ -50,4 +67,5 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return <>{children}</>;
 };
+
 export default AuthProvider;

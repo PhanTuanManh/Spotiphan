@@ -1,18 +1,41 @@
 // src/routes/playlist.routes.js
-import express from "express";
-import { addSongToPlaylist, createPlaylist, deletePlaylist, getMyPlaylists, getPlaylistById, removeSongFromPlaylist, updatePlaylist } from "../controller/playlist.controller.js";
-import { requirePremiumOrHigher } from "../middleware/authorization.middleware.js";
 
+import express from "express";
+
+import {craetePlaylist} from  "../controller/playlist.controller.js"
+
+import { protectRoute } from "../middleware/auth.middleware.js";
+import { requirePremiumOrHigher } from "../middleware/authorization.middleware.js";
+import { syncUserWithMongoDB } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.post("/", requirePremiumOrHigher, createPlaylist);
-router.get("/", getMyPlaylists);
-router.get("/:playlistId", getPlaylistById);
-router.put("/:playlistId", updatePlaylist);
-router.delete("/:playlistId", deletePlaylist);
-router.post("/:playlistId/add-song", addSongToPlaylist);
-router.delete("/:playlistId/remove-song", removeSongFromPlaylist);
+// **Tạo playlist (Premium, Artist, Admin)**
+router.post("/", protectRoute, requirePremiumOrHigher, syncUserWithMongoDB, craetePlaylist);
+
+// **Danh sách playlist công khai của Admin trên trang Home**
+router.get("/home", getPublicPlaylistsForHome);
+
+// **Tìm kiếm playlist công khai theo tên**
+router.get("/search", searchPublicPlaylists);
+
+// **Lấy danh sách playlist của người dùng hiện tại (hỗ trợ phân trang)**
+router.get("/", protectRoute,syncUserWithMongoDB, getMyPlaylists);
+
+// **Lấy thông tin chi tiết của một playlist**
+router.get("/:playlistId", protectRoute,syncUserWithMongoDB, getPlaylistById);
+
+// **Cập nhật playlist (tên, trạng thái công khai)**
+router.put("/:playlistId", protectRoute,syncUserWithMongoDB, updatePlaylist);
+
+// **Xóa playlist**
+router.delete("/:playlistId", protectRoute,syncUserWithMongoDB, deletePlaylist);
+
+// **Quản lý bài hát trong Playlist**
+router.post("/:playlistId/add-song", protectRoute,syncUserWithMongoDB, addSongToPlaylist);
+router.delete("/:playlistId/remove-song", protectRoute,syncUserWithMongoDB, removeSongFromPlaylist);
+
+// **Playlist thịnh hành**
+router.get("/trending/songs", getTrendingSongs);
 
 export default router;
-

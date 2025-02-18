@@ -245,22 +245,68 @@ export const getAllUsers = async (req, res, next) => {
 			next(error);
 		}
 	}
-
-export const deleteUser = async (req, res, next) => {
-	
-		try {
-			const { userId } = req.params;
-			const user = await User.findByIdAndDelete(userId);
-
-			if (!user) {
-				return res.status(404).json({ message: "User not found" });
-			}
-
-			res.status(200).json({ message: "User deleted successfully" });
-		} catch (error) {
-			next(error);
-		}
-	}
+    
+    export const deleteUser = async (req, res, next) => {
+        try {
+            const { userId } = req.params;
+    
+            // Tìm user trước khi xóa
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({ message: "User not found" });
+            }
+    
+            // 1️⃣ **Xóa Playlist của user**
+            await Playlist.deleteMany({ userId });
+    
+            // 2️⃣ **Xóa Albums & Songs nếu user là artist**
+            if (user.role === "artist") {
+                const albums = await Album.find({ artist: userId });
+    
+                for (const album of albums) {
+                    // Xóa tất cả bài hát trong album
+                    await Song.deleteMany({ albumId: album._id });
+                }
+    
+                // Xóa album của user
+                await Album.deleteMany({ artist: userId });
+    
+                // Xóa tất cả bài hát Single của artist
+                await Song.deleteMany({ artist: userId, isSingle: true });
+            }
+    
+            // 3️⃣ **Xóa lịch sử nghe nhạc**
+            await UserListeningHistory.deleteMany({ userId });
+    
+            // 4️⃣ **Xóa lịch sử thanh toán**
+            await Payment.deleteMany({ userId });
+    
+            // 5️⃣ **Xóa tin nhắn của user**
+            await Message.deleteMany({ senderId: userId });
+            await Message.deleteMany({ receiverId: userId });
+    
+            // 6️⃣ **Gỡ user khỏi danh sách followers/following**
+            await User.updateMany(
+                { following: userId },
+                { $pull: { following: userId } }
+            );
+    
+            await User.updateMany(
+                { followers: userId },
+                { $pull: { followers: userId } }
+            );
+    
+            // 7️⃣ **Xóa user**
+            await User.findByIdAndDelete(userId);
+    
+            res.status(200).json({ message: "User and associated data deleted successfully." });
+    
+        } catch (error) {
+            console.error("Error deleting user:", error);
+            next(error);
+        }
+    };
+    
 
 export const toggleBlockUser = async (req, res, next) => {
 	
@@ -338,39 +384,6 @@ export const getAllSubscriptionPlans = async (req, res, next) => {
 	}
 };
 
-// Todo: Playlist Logic API
-/**
- * Admin tạo Public Playlist
- */
-export const createPublicPlaylist = async (req, res) => {
-    try {
-        const { name, songIds } = req.body;
-        const userId = req.auth.userId; // Admin ID
-
-		if (songIds.length > 50) {
-            return res.status(400).json({ message: "A playlist can have a maximum of 50 songs." });
-        }
-
-        // Kiểm tra bài hát có hợp lệ không
-        const approvedSongs = await Song.find({ _id: { $in: songIds }, status: "approved" });
-        if (approvedSongs.length !== songIds.length) {
-            return res.status(400).json({ message: "Một số bài hát chưa được duyệt" });
-        }
-
-        // Tạo Playlist
-        const newPlaylist = new Playlist({
-            name,
-            userId,
-            songs: songIds,
-            isPublic: true, // Admin tạo Playlist công khai
-        });
-
-        await newPlaylist.save();
-        res.status(201).json({ message: "Playlist công khai đã được tạo", playlist: newPlaylist });
-    } catch (error) {
-        res.status(500).json({ message: "Lỗi server", error });
-    }
-};
 
 // Todo: Advertisement Logic API
 export const createAdvertisement = async (req, res, next) => {
@@ -402,4 +415,9 @@ export const deleteAdvertisement = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+};
+
+
+export const checkAdmin = async (req, res, next) => {
+	res.status(200).json({ admin: true });
 };

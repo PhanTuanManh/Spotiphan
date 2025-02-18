@@ -3,16 +3,16 @@
 import express from "express";
 
 
-import { requireArtistOrAdmin } from "../middleware/authorization.middleware.js";
-import { archiveAlbum, archiveSong, createAlbum, createSong, followUser, getMe, getMessages, getPaymentHistory, getUserProfile, unfollowUser, updateUserProfile } from "../controller/user.controller.js";
-import { updateSubscriptionPlan } from "../controller/admin.controller.js";
+import { archiveAlbum, archiveSong, createAlbum, createSong, followUser, getMe , getMessages, getPaymentHistory, getUserProfile, removeSongFromAlbum, unfollowUser, updateSong, updateSubscriptionPlan, updateUserProfile } from "../controller/user.controller.js";
+import { requireArtist, requireArtistOrAdmin } from "../middleware/authorization.middleware.js";
+import { protectRoute, syncUserWithMongoDB } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
 // **Lấy thông tin User**
-router.get("/:userId", getUserProfile);
-router.get("/me", getMe);
+router.get("/me" ,protectRoute,syncUserWithMongoDB, getMe);
 router.put("/me", updateUserProfile);
+router.get("/:userId", getUserProfile);
 
 // **Follow / Unfollow**
 router.post("/:userId/follow", followUser);
@@ -27,12 +27,14 @@ router.get("/:userId/messages", getMessages);
 // **Cập nhật gói Subscription**
 router.put("/me/subscription", updateSubscriptionPlan);
 
-// **Quản lý Album (dành cho Artist)**
-router.post("/albums", requireArtistOrAdmin, createAlbum);
+// **Quản lý Album (chỉ dành cho Artist)**
+router.post("/albums", requireArtist, createAlbum);
+router.put("/albums/:albumId/remove-song/:songId", requireArtist, removeSongFromAlbum);
 router.put("/albums/:albumId/archive", requireArtistOrAdmin, archiveAlbum);
 
-// **Quản lý bài hát (dành cho Artist)**
-router.post("/songs", requireArtistOrAdmin, createSong);
+// **Quản lý bài hát (chỉ dành cho Artist)**
+router.post("/songs", requireArtist, createSong);
 router.put("/songs/:songId/archive", requireArtistOrAdmin, archiveSong);
+router.put("/songs/:songId", requireArtist, updateSong);
 
 export default router;

@@ -1,40 +1,41 @@
 // src/routes/admin.routes.js
 
 import { Router } from "express";
-import { approveAlbum, approveSingleOrEP, createAdvertisement, createPublicPlaylist, createSubscriptionPlan, createUser, deleteAdvertisement, deleteAlbum, deleteSubscriptionPlan, deleteUser, getAllAlbums, getAllSinglesOrEPs, getAllSubscriptionPlans, getAllUsers, rejectAlbum, rejectSingleOrEP, toggleBlockUser, updateSubscriptionPlan } from "../controller/admin.controller.js";
-import { requireAdmin } from "../middleware/auth.middleware.js";
+import { approveAlbum, approveSingleOrEP, checkAdmin, createAdvertisement, createPublicPlaylist, createSubscriptionPlan, createUser, deleteAdvertisement, deleteAlbum, deleteSubscriptionPlan, deleteUser, getAllAlbums, getAllSinglesOrEPs, getAllSubscriptionPlans, getAllUsers, rejectAlbum, rejectSingleOrEP, toggleBlockUser, updateSubscriptionPlan } from "../controller/admin.controller.js";
+import { protectRoute, requireAdmin, syncUserWithMongoDB } from "../middleware/auth.middleware.js";
 
 const router = Router();
+router.use(protectRoute);
 router.use(requireAdmin);
 
+// **check admin**
+router.get("/check", checkAdmin);
+
 // **Quản lý Single/EP**
-router.put("/singles/:songId/approve", approveSingleOrEP);
-router.put("/singles/:songId/reject", rejectSingleOrEP);
-router.get("/singles", getAllSinglesOrEPs);
+router.put("/singles/:songId/approve", syncUserWithMongoDB, approveSingleOrEP);
+router.put("/singles/:songId/reject", syncUserWithMongoDB, rejectSingleOrEP);
+router.get("/singles", syncUserWithMongoDB, getAllSinglesOrEPs);
 
 // **Quản lý Album**
-router.put("/albums/:albumId/approve", approveAlbum);
-router.put("/albums/:albumId/reject", rejectAlbum);
-router.delete("/albums/:albumId", deleteAlbum);
-router.get("/albums", getAllAlbums);
+router.put("/albums/:albumId/approve", syncUserWithMongoDB, approveAlbum);
+router.put("/albums/:albumId/reject", syncUserWithMongoDB, rejectAlbum);
+router.delete("/albums/:albumId", syncUserWithMongoDB, deleteAlbum);
+router.get("/albums", syncUserWithMongoDB, getAllAlbums);
 
 // **Quản lý User**
-router.post("/users", createUser);
-router.get("/users", getAllUsers);
-router.delete("/users/:userId", deleteUser);
-router.put("/users/:userId/toggle-block", toggleBlockUser);
+router.post("/users", syncUserWithMongoDB, createUser);
+router.get("/users", syncUserWithMongoDB, getAllUsers);
+router.delete("/users/:userId", syncUserWithMongoDB, deleteUser);
+router.put("/users/:userId/toggle-block", syncUserWithMongoDB, toggleBlockUser);
 
 // **Quản lý Subscription Plans**
-router.post("/subscriptions", createSubscriptionPlan);
-router.delete("/subscriptions/:id", deleteSubscriptionPlan);
-router.put("/subscriptions/:id", updateSubscriptionPlan);
-router.get("/subscriptions", getAllSubscriptionPlans);
-
-// **Quản lý Playlist (Admin tạo Public Playlist)**
-router.post("/playlists/public", createPublicPlaylist);
+router.post("/subscriptions", syncUserWithMongoDB, createSubscriptionPlan);
+router.delete("/subscriptions/:id", syncUserWithMongoDB, deleteSubscriptionPlan);
+router.put("/subscriptions/:id", syncUserWithMongoDB, updateSubscriptionPlan);
+router.get("/subscriptions", syncUserWithMongoDB, getAllSubscriptionPlans);
 
 // **Quản lý Quảng cáo**
-router.post("/advertisements", createAdvertisement);
-router.delete("/advertisements/:id", deleteAdvertisement);
+router.post("/advertisements", syncUserWithMongoDB, createAdvertisement);
+router.delete("/advertisements/:id", syncUserWithMongoDB, deleteAdvertisement);
 
 export default router;

@@ -1,11 +1,12 @@
 // src/controllers/user.controller.js
+import mongoose from "mongoose";
+import cloudinary from "../lib/cloudinary.js";
+import { io } from "../lib/socket.js"; // WebSocket để gửi thông báo realtime
+import { Album } from "../models/album.model.js";
 import { Message } from "../models/message.model.js";
 import { Payment } from "../models/payment.model.js";
-import { User } from "../models/user.model.js";
-import cloudinary from "../lib/cloudinary.js";
-import { Album } from "../models/album.model.js";
 import { Song } from "../models/song.model.js";
-import { io } from "../lib/socket.js"; // WebSocket để gửi thông báo realtime
+import { User } from "../models/user.model.js";
 
 // helper function for cloudinary uploads
 const uploadToCloudinary = async (file) => {
@@ -26,11 +27,15 @@ const uploadToCloudinary = async (file) => {
 export const getUserProfile = async (req, res, next) => {
     try {
         const { userId } = req.params;
-        const user = await User.findById(userId)
-            .populate("subscriptionPlan")
-            .populate("likedSongs")
-            .populate("followers")
-            .populate("following");
+
+        let user;
+
+        // Kiểm tra nếu userId là ObjectId hợp lệ
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+            user = await User.findById(userId);
+        } else {
+            user = await User.findOne({ clerkId: userId });
+        }
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -40,11 +45,19 @@ export const getUserProfile = async (req, res, next) => {
             return res.status(403).json({ message: "This user is blocked" });
         }
 
+        // Populate dữ liệu
+        await user.populate("subscriptionPlan likedSongs followers following playlists");
+        if (user.role === "artist") {
+            await user.populate("albums");
+        }
+
         res.status(200).json(user);
     } catch (error) {
+        console.error("🔥 Error in getUserProfile:", error);
         next(error);
     }
 };
+
 
 
 /**
@@ -52,22 +65,37 @@ export const getUserProfile = async (req, res, next) => {
  */
 export const getMe = async (req, res, next) => {
     try {
+        // Ensure user is authenticated
+        if (!req.auth || !req.auth.userId) {
+            return res.status(401).json({ message: "Unauthorized - Please log in" });
+        }
+
         const myId = req.auth.userId;
+
+        // Find user by clerkId
         const user = await User.findOne({ clerkId: myId })
             .populate("subscriptionPlan")
             .populate("likedSongs")
             .populate("followers")
-            .populate("following");
+            .populate("following")
+            .populate("playlists");
 
         if (!user) {
             return res.status(404).json({ message: "User not found. Please register first." });
         }
 
+        // If user is an artist, populate their albums
+        if (user.role === "artist") {
+            await user.populate("albums");
+        }
+
         res.status(200).json(user);
     } catch (error) {
+        console.error("Error in getMe:", error);
         next(error);
     }
 };
+
 
 
 /**
@@ -120,8 +148,8 @@ export const followUser = async (req, res, next) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        if (user.isBlocked) {
-            return res.status(403).json({ message: "This user is blocked" });
+        if (user.isBlocked || me.isBlocked) {
+            return res.status(403).json({ message: "Cannot follow a blocked user" });
         }
 
         if (me.following.includes(userId)) {
@@ -134,7 +162,6 @@ export const followUser = async (req, res, next) => {
         await me.save();
         await user.save();
 
-        // Gửi thông báo realtime
         io.emit("new_follower", { userId: user._id, followerId: me._id });
 
         res.status(200).json({ message: "Followed successfully" });
@@ -245,21 +272,23 @@ export const getMessages = async (req, res, next) => {
  */
 export const updateSubscriptionPlan = async (req, res, next) => {
     try {
-        const myId = req.auth.userId; // ID người dùng hiện tại (được xác thực)
-        const { planId } = req.body; // ID của gói subscription mới
+        const myId = req.auth.userId;
+        const { planId } = req.body;
 
-        // Kiểm tra xem gói subscription có tồn tại không
         const plan = await SubscriptionPlan.findById(planId);
         if (!plan) {
             return res.status(404).json({ message: "Subscription plan not found" });
         }
 
-        // Tìm user và cập nhật gói subscription + ngày hết hạn
+        // Tính toán thời gian hết hạn gói Premium
+        const newExpiration = new Date(Date.now() + plan.durationInDays * 24 * 60 * 60 * 1000);
+
         const user = await User.findOneAndUpdate(
             { clerkId: myId },
             {
                 subscriptionPlan: plan._id,
-                premiumExpiration: new Date(Date.now() + plan.durationInDays * 24 * 60 * 60 * 1000),
+                premiumExpiration: newExpiration,
+                role: "premium", // **Cập nhật role thành "premium" khi user mua gói**
             },
             { new: true }
         ).populate("subscriptionPlan");
@@ -311,6 +340,30 @@ export const createAlbum = async (req, res, next) => {
     }
 };
 
+export const removeSongFromAlbum = async (req, res, next) => {
+    try {
+        const { albumId, songId } = req.params;
+        const userId = req.auth.userId;
+
+        const album = await Album.findById(albumId);
+        if (!album) {
+            return res.status(404).json({ message: "Album not found" });
+        }
+
+        if (album.artist.toString() !== userId) {
+            return res.status(403).json({ message: "Only the artist can remove songs from this album" });
+        }
+
+        album.songs = album.songs.filter(id => id.toString() !== songId);
+        await album.save();
+
+        res.status(200).json({ message: "Song removed from album successfully", album });
+    } catch (error) {
+        next(error);
+    }
+};
+
+
 export const archiveAlbum = async (req, res) => {
     try {
         const { albumId } = req.params;
@@ -336,44 +389,78 @@ export const archiveAlbum = async (req, res) => {
  */
 export const createSong = async (req, res, next) => {
     try {
+        // Kiểm tra xem có đủ file không
         if (!req.files || !req.files.audioFile || !req.files.imageFile) {
-            return res.status(400).json({ message: "Please upload all files" });
+            return res.status(400).json({ message: "Vui lòng tải lên đầy đủ tệp âm thanh và ảnh bìa" });
         }
 
-        const { title, artist, albumId, duration } = req.body;
+        const { title, albumId, duration, isSingle } = req.body;
+        const artistId = req.auth.userId;
+
+        // Kiểm tra xem user có phải artist không
+        const artist = await User.findById(artistId);
+        if (!artist || artist.role !== "artist") {
+            return res.status(403).json({ message: "Chỉ artist mới có quyền thêm bài hát" });
+        }
+
+        // Kiểm tra chỉ được chọn một trong hai: isSingle hoặc albumId
+        if ((!isSingle && !albumId) || (isSingle && albumId)) {
+            return res.status(400).json({ message: "Bạn phải chọn một trong hai: Single/EP hoặc Album" });
+        }
+
+        // Nếu có albumId, kiểm tra album có tồn tại không
+        let album = null;
+        if (albumId) {
+            album = await Album.findById(albumId);
+            if (!album) {
+                return res.status(404).json({ message: "Album không tồn tại" });
+            }
+
+            // Kiểm tra xem user có phải chủ album không
+            if (album.artist.toString() !== artistId) {
+                return res.status(403).json({ message: "Bạn không có quyền thêm bài hát vào album này" });
+            }
+
+             // Kiểm tra xem bài hát đã tồn tại trong album chưa
+             const existingSong = await Song.findOne({ title, albumId });
+             if (existingSong) {
+                 return res.status(400).json({ message: "Bài hát này đã tồn tại trong album." });
+             }
+        }
+
+        // Upload file lên Cloudinary
         const audioFile = req.files.audioFile;
         const imageFile = req.files.imageFile;
-
         const audioUrl = await uploadToCloudinary(audioFile);
         const imageUrl = await uploadToCloudinary(imageFile);
 
-        const isSingle = !albumId; // Nếu không có albumId, đây là một Single
-
+        // Tạo bài hát mới
         const song = new Song({
             title,
-            artist,
+            artist: artist._id,
             audioUrl,
             imageUrl,
             duration,
-            albumId: albumId || null,
-            isSingle
+            albumId: album ? album._id : null, // Nếu không có album, set null
+            isSingle: !!isSingle, // Nếu không có album, là Single/EP
         });
 
         await song.save();
 
         // Nếu bài hát thuộc album, cập nhật album
-        if (albumId) {
-            await Album.findByIdAndUpdate(albumId, {
-                $push: { songs: song._id }
-            });
+        if (album) {
+            album.songs.push(song._id);
+            await album.save();
         }
 
-        res.status(201).json(song);
+        res.status(201).json({ message: "Bài hát đã được tạo thành công", song });
     } catch (error) {
-        console.log("Error in createSong", error);
+        console.log("Lỗi khi tạo bài hát:", error);
         next(error);
     }
 };
+
+
 
 export const archiveSong = async (req, res) => {
     try {
@@ -382,6 +469,11 @@ export const archiveSong = async (req, res) => {
         const song = await Song.findById(songId);
         if (!song) {
             return res.status(404).json({ message: "Song not found" });
+        }
+
+        // Kiểm tra quyền của artist
+        if (song.artist.toString() !== artistId) {
+            return res.status(403).json({ message: "Bạn không có quyền archive bài hát này." });
         }
 
         song.status = "archived";
@@ -393,3 +485,52 @@ export const archiveSong = async (req, res) => {
         res.status(500).json({ message: "Error archiving song" });
     }
 };
+
+
+export const updateSong = async (req, res, next) => {
+    try {
+        const { songId } = req.params;
+        const { title, duration } = req.body;
+        const artistId = req.auth.userId;
+
+        // Tìm bài hát
+        const song = await Song.findById(songId);
+        if (!song) {
+            return res.status(404).json({ message: "Bài hát không tồn tại" });
+        }
+
+        // Kiểm tra quyền sở hữu
+        if (song.artist.toString() !== artistId) {
+            return res.status(403).json({ message: "Bạn không có quyền chỉnh sửa bài hát này" });
+        }
+
+        // Kiểm tra nếu cần update ảnh bìa hoặc file nhạc
+        let imageUrl = song.imageUrl;
+        let audioUrl = song.audioUrl;
+
+        if (req.files) {
+            if (req.files.imageFile) {
+                const imageResult = await uploadToCloudinary(req.files.imageFile);
+                imageUrl = imageResult;
+            }
+            if (req.files.audioFile) {
+                const audioResult = await uploadToCloudinary(req.files.audioFile);
+                audioUrl = audioResult;
+            }
+        }
+
+        // Cập nhật bài hát
+        song.title = title || song.title;
+        song.duration = duration || song.duration;
+        song.imageUrl = imageUrl;
+        song.audioUrl = audioUrl;
+
+        await song.save();
+
+        res.status(200).json({ message: "Cập nhật bài hát thành công", song });
+    } catch (error) {
+        console.log("Lỗi khi cập nhật bài hát:", error);
+        next(error);
+    }
+};
+
