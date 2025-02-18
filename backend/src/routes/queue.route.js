@@ -1,12 +1,12 @@
 // src/routes/queue.routes.js
 
-import express from "express";
+import {Router} from "express";
 
 
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { addSongToQueue, cloneToQueue, getQueue, nextSong, prevSong, toggleLoopMode, toggleShuffle } from "../controller/queue.controller.js";
 
-const router = express.Router();
+const router = Router();
 
 // **Quản lý Queue**
 router.post("/clone", protectRoute, cloneToQueue);

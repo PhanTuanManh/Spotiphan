@@ -1,7 +1,7 @@
 // src/routes/admin.routes.js
 
 import { Router } from "express";
-import { approveAlbum, approveSingleOrEP, checkAdmin, createAdvertisement, createPublicPlaylist, createSubscriptionPlan, createUser, deleteAdvertisement, deleteAlbum, deleteSubscriptionPlan, deleteUser, getAllAlbums, getAllSinglesOrEPs, getAllSubscriptionPlans, getAllUsers, rejectAlbum, rejectSingleOrEP, toggleBlockUser, updateSubscriptionPlan } from "../controller/admin.controller.js";
+import { approveAlbum, approveSingleOrEP, checkAdmin, createAdvertisement, createSubscriptionPlan, createUser, deleteAdvertisement, deleteAlbum, deleteSubscriptionPlan, deleteUser, getAllAlbums, getAllSinglesOrEPs, getAllSubscriptionPlans, getAllUsers, rejectAlbum, rejectSingleOrEP, toggleBlockUser, updateSubscriptionPlan } from "../controller/admin.controller.js";
 import { protectRoute, requireAdmin, syncUserWithMongoDB } from "../middleware/auth.middleware.js";
 
 const router = Router();
@@ -39,3 +39,4 @@ router.post("/advertisements", syncUserWithMongoDB, createAdvertisement);
 router.delete("/advertisements/:id", syncUserWithMongoDB, deleteAdvertisement);
 
 export default router;
+  

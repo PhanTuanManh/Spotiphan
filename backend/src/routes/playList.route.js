@@ -2,16 +2,16 @@
 
 import express from "express";
 
-import {craetePlaylist} from  "../controller/playlist.controller.js"
 
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { requirePremiumOrHigher } from "../middleware/authorization.middleware.js";
 import { syncUserWithMongoDB } from "../middleware/auth.middleware.js";
+import { addSongToPlaylist, createPlaylist, deletePlaylist, getMyPlaylists, getPlaylistById, getPublicPlaylistsForHome, getTrendingSongs, removeSongFromPlaylist, searchPublicPlaylists, updatePlaylist } from "../controller/playlist.controller.js";
 
 const router = express.Router();
 
 // **Tạo playlist (Premium, Artist, Admin)**
-router.post("/", protectRoute, requirePremiumOrHigher, syncUserWithMongoDB, craetePlaylist);
+router.post("/", protectRoute, requirePremiumOrHigher, syncUserWithMongoDB, createPlaylist);
 
 // **Danh sách playlist công khai của Admin trên trang Home**
 router.get("/home", getPublicPlaylistsForHome);

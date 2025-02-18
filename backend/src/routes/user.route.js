@@ -1,13 +1,13 @@
 // src/routes/user.routes.js
 
-import express from "express";
+import {Router} from "express";
 
 
 import { archiveAlbum, archiveSong, createAlbum, createSong, followUser, getMe , getMessages, getPaymentHistory, getUserProfile, removeSongFromAlbum, unfollowUser, updateSong, updateSubscriptionPlan, updateUserProfile } from "../controller/user.controller.js";
 import { requireArtist, requireArtistOrAdmin } from "../middleware/authorization.middleware.js";
 import { protectRoute, syncUserWithMongoDB } from "../middleware/auth.middleware.js";
 
-const router = express.Router();
+const router = Router();
 
 // **Lấy thông tin User**
 router.get("/me" ,protectRoute,syncUserWithMongoDB, getMe);
