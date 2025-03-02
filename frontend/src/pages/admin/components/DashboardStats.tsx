@@ -1,5 +1,5 @@
 import { useMusicStore } from "@/stores/useMusicStore";
-import { Library, ListMusic, PlayCircle, Users2 } from "lucide-react";
+import { Library, ListMusic, ListVideo, PlayCircle, Users2 } from "lucide-react";
 import StatsCard from "./StatsCard";
 
 const DashboardStats = () => {
@@ -34,10 +34,17 @@ const DashboardStats = () => {
 			bgColor: "bg-sky-500/10",
 			iconColor: "text-sky-500",
 		},
+		{
+			icon: ListVideo,
+			label: "Total Playlists",
+			value: stats.totalPlaylists.toString(),
+			bgColor: "bg-rose-500/10",
+			iconColor: "text-rose-500",
+		}
 	];
 
 	return (
-		<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 '>
+		<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8 '>
 			{statsData.map((stat) => (
 				<StatsCard
 					key={stat.label}

@@ -23,6 +23,7 @@ import artistRoutes from "./routes/artist.route.js";
 import playlistRoutes from "./routes/playList.route.js";
 import userListeningHistoryRoutes from "./routes/userListeningHistory.route.js"
 import advertisementRoutes from "./routes/advertisement.route.js"
+import categoryRoutes from "./routes/category.route.js"
 
 dotenv.config();
 
@@ -74,6 +75,7 @@ app.use("/api/artists", artistRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/songs", songRoutes);
+app.use("/api/categories", categoryRoutes);
 app.use("/api/albums", albumRoutes);
 app.use("/api/stats", statRoutes);
 app.use("/api/playlists", playlistRoutes);

@@ -26,7 +26,7 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
   fetchAlbums: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get("/api/albums");
+      const response = await axiosInstance.get("/albums");
       set({ albums: response.data });
     } catch (error: any) {
       set({ error: error.message });
@@ -40,7 +40,7 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
   fetchAlbumById: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(`/api/albums/${id}`);
+      const response = await axiosInstance.get(`/albums/${id}`);
       set({ currentAlbum: response.data });
     } catch (error: any) {
       set({ error: error.message });
@@ -54,7 +54,7 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
   createAlbum: async (albumData: IAlbum) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post("/api/albums", albumData);
+      const response = await axiosInstance.post("/albums", albumData);
       set((state) => ({
         albums: [...state.albums, response.data],
       }));
@@ -71,7 +71,7 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
   updateAlbum: async (id: string, albumData: IAlbum) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.put(`/api/albums/${id}`, albumData);
+      const response = await axiosInstance.put(`/albums/${id}`, albumData);
       set((state) => ({
         albums: state.albums.map((album) =>
           album._id === id ? response.data : album
@@ -90,7 +90,7 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
   deleteAlbum: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      await axiosInstance.delete(`/api/admin/albums/${id}`);
+      await axiosInstance.delete(`/admin/albums/${id}`);
       set((state) => ({
         albums: state.albums.filter((album) => album._id !== id),
       }));

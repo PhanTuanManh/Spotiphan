@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import { axiosInstance } from "@/lib/axios";  // Đảm bảo axiosInstance đã được cấu hình
-import { IPlaylist, ISong } from "@/types";  // Đảm bảo kiểu dữ liệu từ types/index.ts
+import { axiosInstance } from "@/lib/axios"; // Đảm bảo axiosInstance đã được cấu hình
+import { IPlaylist } from "@/types"; // Đảm bảo kiểu dữ liệu từ types/index.ts
 import toast from "react-hot-toast";
+import { create } from "zustand";
 
 interface PlaylistStore {
   playlists: IPlaylist[];

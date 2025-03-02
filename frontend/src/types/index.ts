@@ -95,17 +95,22 @@ export interface BaseModel {
   // ===== Song =====
   export type SongStatus = "pending" | "approved" | "rejected" | "archived";
   
+  export interface IArtistInfo {
+	fullName: string;
+	imageUrl: string;
+  }
+
   export interface ISong extends BaseModel {
 	title: string;
-	artist: string; // user id của nghệ sĩ
+	artist: string | IArtistInfo; 
 	imageUrl: string;
 	audioUrl: string;
 	duration: number;
-	albumId?: string; // optional, vì bài hát có thể không thuộc album nào
+	albumId?: string; 
 	listenCount: number;
 	isFeatured: boolean;
-	lastListenedAt?: string; // ISO string (optional)
-	likes: string[];       // mảng user id của người thích bài hát
+	lastListenedAt?: string;
+	likes: string[];      
 	status: SongStatus;
 	isSingle: boolean;
   }
@@ -130,7 +135,7 @@ export interface BaseModel {
 	role: UserRole;
 	premiumExpiration?: string | null; // ISO string hoặc null
 	isPremium: boolean;
-	subscriptionPlan?: string;
+	subscriptionPlan?: string | null; // ✅ Phù hợp hơn với MongoDB khi không có gói nào
 	paymentHistory: string[]; 
 	likedSongs: string[];      
 	playlists: string[];     

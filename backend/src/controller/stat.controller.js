@@ -1,6 +1,7 @@
 import { Album } from "../models/album.model.js";
 import { Song } from "../models/song.model.js";
 import { User } from "../models/user.model.js";
+import { Playlist } from "../models/playList.model.js";
 
 /**
  * @route GET /stats
@@ -10,11 +11,12 @@ import { User } from "../models/user.model.js";
 export const getStats = async (req, res, next) => {
 	try {
 		// Dùng `Promise.allSettled` để tránh lỗi ảnh hưởng toàn bộ API
-		const [totalSongs, totalAlbums, totalUsers, totalArtists] = await Promise.allSettled([
+		const [totalSongs, totalAlbums, totalUsers, totalArtists, totalPlaylists] = await Promise.allSettled([
 			Song.countDocuments(),
 			Album.countDocuments(),
 			User.countDocuments(),
 			User.countDocuments({ role: "artist" }), // Thống kê số lượng nghệ sĩ
+			Playlist.countDocuments(),
 		]);
 
 		res.status(200).json({
@@ -22,6 +24,7 @@ export const getStats = async (req, res, next) => {
 			totalSongs: totalSongs.status === "fulfilled" ? totalSongs.value : 0,
 			totalUsers: totalUsers.status === "fulfilled" ? totalUsers.value : 0,
 			totalArtists: totalArtists.status === "fulfilled" ? totalArtists.value : 0,
+			totalPlaylists: totalPlaylists.status === "fulfilled" ? totalPlaylists.value : 0,
 		});
 	} catch (error) {
 		console.error("❌ Lỗi khi lấy thống kê:", error);

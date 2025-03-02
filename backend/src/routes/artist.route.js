@@ -3,7 +3,7 @@ import { Router } from "express";
 import { archiveAlbum,  createAlbum, getMyAlbums, removeSongFromAlbum,  } from "../controller/album.controller.js";
 import { protectRoute,  syncUserWithMongoDB } from "../middleware/auth.middleware.js";
 import { requireArtist, requireArtistOrAdmin } from "../middleware/authorization.middleware.js";
-import { archiveSong, createSong, updateSong } from "../controller/user.controller.js";
+import { archiveSong, createSong, updateSong } from "../controller/song.controller.js";
 
 const router = Router();
 router.use(syncUserWithMongoDB);

@@ -1,3 +1,5 @@
+//src/pages/admin/components/AlbumsTable.tsx
+
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -7,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useMusicStore } from "@/stores/useMusicStore";
+import { useAlbumStore } from "@/stores/useAlbumStore";
 import { Calendar, Music, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -37,7 +39,7 @@ const removeDiacritics = (str: string) => {
 };
 
 const AlbumsTable = () => {
-  const { albums, deleteAlbum, fetchAlbums } = useMusicStore();
+  const { albums, deleteAlbum, fetchAlbums } = useAlbumStore();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   useEffect(() => {

@@ -7,7 +7,7 @@ interface AdvertisementState {
   allAdvertisements: IAdvertisement[]; // Danh sách tất cả quảng cáo (Admin)
   loading: boolean;
   error: string | null;
-
+              
   getActiveAdvertisements: () => Promise<void>; // Lấy quảng cáo active
   getAllAdvertisements: (page?: number, limit?: number) => Promise<void>; // Lấy tất cả quảng cáo (Admin)
   createAdvertisement: (data: Omit<IAdvertisement, "_id" | "createdAt" | "updatedAt">) => Promise<void>;

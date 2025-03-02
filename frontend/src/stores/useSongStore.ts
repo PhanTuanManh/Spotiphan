@@ -1,3 +1,5 @@
+// src/stores/useSongStore.ts
+
 import { create } from "zustand";
 import { axiosInstance } from "@/lib/axios";  // Đảm bảo axiosInstance đã được cấu hình
 import { ISong } from "@/types";  // Đảm bảo kiểu dữ liệu từ types/index.ts
@@ -27,21 +29,29 @@ export const useSongStore = create<SongStore>((set) => ({
   fetchSongs: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get("/api/songs");
-      set({ songs: response.data });
+      const response = await axiosInstance.get("/songs");
+  
+      console.log("API Response:", response.data); // Kiểm tra dữ liệu trả về
+  
+      // Lấy đúng dữ liệu từ API (response.data.data thay vì response.data)
+      const songs = Array.isArray(response.data.data) ? response.data.data : [];
+      set({ songs });
+  
     } catch (error: any) {
-      set({ error: error.message });
+      console.error("Fetch Songs Error:", error);
+      set({ error: error.message, songs: [] }); // Đảm bảo songs luôn là mảng
       toast.error("Failed to fetch songs");
     } finally {
       set({ isLoading: false });
     }
   },
-
+  
+  
   // Fetch a song by ID
   fetchSongById: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(`/api/songs/${id}`);
+      const response = await axiosInstance.get(`/songs/${id}`);
       set({ currentSong: response.data });
     } catch (error: any) {
       set({ error: error.message });
@@ -55,7 +65,7 @@ export const useSongStore = create<SongStore>((set) => ({
   likeSong: async (songId: string) => {
     set({ isLoading: true, error: null });
     try {
-      await axiosInstance.post(`/api/users/me/like-song`, { songId });
+      await axiosInstance.post(`/users/me/like-song`, { songId });
       toast.success("Song liked successfully");
     } catch (error: any) {
       set({ error: error.message });
@@ -69,7 +79,7 @@ export const useSongStore = create<SongStore>((set) => ({
   dislikeSong: async (songId: string) => {
     set({ isLoading: true, error: null });
     try {
-      await axiosInstance.post(`/api/users/me/dislike-song`, { songId });
+      await axiosInstance.post(`/users/me/dislike-song`, { songId });
       toast.success("Song disliked successfully");
     } catch (error: any) {
       set({ error: error.message });
@@ -83,7 +93,7 @@ export const useSongStore = create<SongStore>((set) => ({
   addSongToPlaylist: async (songId: string, playlistId: string) => {
     set({ isLoading: true, error: null });
     try {
-      await axiosInstance.post(`/api/playlists/${playlistId}/add-song`, { songId });
+      await axiosInstance.post(`/playlists/${playlistId}/add-song`, { songId });
       toast.success("Song added to playlist successfully");
     } catch (error: any) {
       set({ error: error.message });
@@ -97,7 +107,7 @@ export const useSongStore = create<SongStore>((set) => ({
   removeSongFromPlaylist: async (songId: string, playlistId: string) => {
     set({ isLoading: true, error: null });
     try {
-      await axiosInstance.delete(`/api/playlists/${playlistId}/remove-song`, { data: { songId } });
+      await axiosInstance.delete(`/playlists/${playlistId}/remove-song`, { data: { songId } });
       toast.success("Song removed from playlist successfully");
     } catch (error: any) {
       set({ error: error.message });
@@ -107,3 +117,4 @@ export const useSongStore = create<SongStore>((set) => ({
     }
   },
 }));
+

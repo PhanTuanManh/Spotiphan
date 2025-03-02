@@ -1,6 +1,5 @@
 // controllers/admin.controller.js
-
-import cloudinary from "../lib/cloudinary.js";
+import { uploadToCloudinary } from "../lib/cloudinary.js";
 import { Advertisement } from "../models/advertisement.model.js";
 import { Album } from "../models/album.model.js";
 import { Playlist } from "../models/playList.model.js";
