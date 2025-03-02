@@ -1,25 +1,27 @@
+// src/stores/useChatStore.ts
+
 import { axiosInstance } from "@/lib/axios";
-import { Message, User } from "@/types";
+import { IMessage, IUser } from "@/types";
 import { create } from "zustand";
 import { io } from "socket.io-client";
 
 interface ChatStore {
-	users: User[];
+	users: IUser[];
 	isLoading: boolean;
 	error: string | null;
 	socket: any;
 	isConnected: boolean;
 	onlineUsers: Set<string>;
 	userActivities: Map<string, string>;
-	messages: Message[];
-	selectedUser: User | null;
+	messages: IMessage[];
+	selectedUser: IUser | null;
 
 	fetchUsers: () => Promise<void>;
 	initSocket: (userId: string) => void;
 	disconnectSocket: () => void;
 	sendMessage: (receiverId: string, senderId: string, content: string) => void;
 	fetchMessages: (userId: string) => Promise<void>;
-	setSelectedUser: (user: User | null) => void;
+	setSelectedUser: (user: IUser | null) => void;
 }
 
 const baseURL = import.meta.env.MODE === "development" ? "http://localhost:5000" : "/";
@@ -83,13 +85,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 				});
 			});
 
-			socket.on("receive_message", (message: Message) => {
+			socket.on("receive_message", (message: IMessage) => {
 				set((state) => ({
 					messages: [...state.messages, message],
 				}));
 			});
 
-			socket.on("message_sent", (message: Message) => {
+			socket.on("message_sent", (message: IMessage) => {
 				set((state) => ({
 					messages: [...state.messages, message],
 				}));

@@ -1,8 +1,9 @@
 // src/routes/admin.routes.js
 
 import { Router } from "express";
-import { approveAlbum, approveSingleOrEP, checkAdmin, createAdvertisement, createSubscriptionPlan, createUser, deleteAdvertisement, deleteAlbum, deleteSubscriptionPlan, deleteUser, getAllAlbums, getAllSinglesOrEPs, getAllSubscriptionPlans, getAllUsers, rejectAlbum, rejectSingleOrEP, toggleBlockUser, updateSubscriptionPlan } from "../controller/admin.controller.js";
+import { approveAlbum, approveSingleOrEP, checkAdmin, createAdvertisement, createSubscriptionPlan, createUser, deleteAdvertisement, deleteAlbum, deleteSubscriptionPlan, deleteUser, getAllAdvertisements, getAllAlbums, getAllSinglesOrEPs, getAllSubscriptionPlans, getAllUsers, rejectAlbum, rejectSingleOrEP, toggleBlockUser, updateSubscriptionPlan } from "../controller/admin.controller.js";
 import { protectRoute, requireAdmin, syncUserWithMongoDB } from "../middleware/auth.middleware.js";
+import { createCategory, deleteCategory, getCategories, getCategoryById, updateCategory } from "../controller/category.controller.js";
 
 const router = Router();
 router.use(protectRoute);
@@ -35,8 +36,17 @@ router.put("/subscriptions/:id", syncUserWithMongoDB, updateSubscriptionPlan);
 router.get("/subscriptions", syncUserWithMongoDB, getAllSubscriptionPlans);
 
 // **Quản lý Quảng cáo**
+router.get("/advertisements", syncUserWithMongoDB, getAllAdvertisements);
 router.post("/advertisements", syncUserWithMongoDB, createAdvertisement);
 router.delete("/advertisements/:id", syncUserWithMongoDB, deleteAdvertisement);
+
+// **Quản lý category
+router.post("/categories/", createCategory);
+router.get("/categories/", getCategories);
+router.get("/categories/:categoryId", getCategoryById);
+router.put("/categories/:categoryId", updateCategory);
+router.delete("/categories/:categoryId", deleteCategory);
+
 
 export default router;
   

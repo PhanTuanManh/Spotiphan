@@ -1,16 +1,19 @@
 // src/routes/user.routes.js
 
-import {Router} from "express";
+import { Router } from "express";
 
 
-import { archiveAlbum, archiveSong, createAlbum, createSong, followUser, getMe , getMessages, getPaymentHistory, getUserProfile, removeSongFromAlbum, unfollowUser, updateSong, updateSubscriptionPlan, updateUserProfile } from "../controller/user.controller.js";
-import { requireArtist, requireArtistOrAdmin } from "../middleware/authorization.middleware.js";
+import { followUser, getMe, getMessages, getPaymentHistory, getUserProfile, unfollowUser, updateSubscriptionPlan, updateUserProfile } from "../controller/user.controller.js";
 import { protectRoute, syncUserWithMongoDB } from "../middleware/auth.middleware.js";
+import { getAllUsers } from "../controller/admin.controller.js";
 
 const router = Router();
+router.use(syncUserWithMongoDB);
+router.use(protectRoute);
 
 // **Lấy thông tin User**
-router.get("/me" ,protectRoute,syncUserWithMongoDB, getMe);
+router.get("/", getAllUsers);
+router.get("/me" , getMe);
 router.put("/me", updateUserProfile);
 router.get("/:userId", getUserProfile);
 
@@ -27,14 +30,5 @@ router.get("/:userId/messages", getMessages);
 // **Cập nhật gói Subscription**
 router.put("/me/subscription", updateSubscriptionPlan);
 
-// **Quản lý Album (chỉ dành cho Artist)**
-router.post("/albums", requireArtist, createAlbum);
-router.put("/albums/:albumId/remove-song/:songId", requireArtist, removeSongFromAlbum);
-router.put("/albums/:albumId/archive", requireArtistOrAdmin, archiveAlbum);
-
-// **Quản lý bài hát (chỉ dành cho Artist)**
-router.post("/songs", requireArtist, createSong);
-router.put("/songs/:songId/archive", requireArtistOrAdmin, archiveSong);
-router.put("/songs/:songId", requireArtist, updateSong);
 
 export default router;

@@ -1,16 +1,16 @@
 import { create } from "zustand";
-import { Song } from "@/types";
+import { ISong } from "@/types";
 import { useChatStore } from "./useChatStore";
 
 interface PlayerStore {
-	currentSong: Song | null;
+	currentSong: ISong | null;
 	isPlaying: boolean;
-	queue: Song[];
+	queue: ISong[];
 	currentIndex: number;
 
-	initializeQueue: (songs: Song[]) => void;
-	playAlbum: (songs: Song[], startIndex?: number) => void;
-	setCurrentSong: (song: Song | null) => void;
+	initializeQueue: (songs: ISong[]) => void;
+	playAlbum: (songs: ISong[], startIndex?: number) => void;
+	setCurrentSong: (song: ISong | null) => void;
 	togglePlay: () => void;
 	playNext: () => void;
 	playPrevious: () => void;
@@ -22,7 +22,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 	queue: [],
 	currentIndex: -1,
 
-	initializeQueue: (songs: Song[]) => {
+	initializeQueue: (songs: ISong[]) => {
 		set({
 			queue: songs,
 			currentSong: get().currentSong || songs[0],
@@ -30,7 +30,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 		});
 	},
 
-	playAlbum: (songs: Song[], startIndex = 0) => {
+	playAlbum: (songs: ISong[], startIndex = 0) => {
 		if (songs.length === 0) return;
 
 		const song = songs[startIndex];
@@ -50,7 +50,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 		});
 	},
 
-	setCurrentSong: (song: Song | null) => {
+	setCurrentSong: (song: ISong | null) => {
 		if (!song) return;
 
 		const socket = useChatStore.getState().socket;

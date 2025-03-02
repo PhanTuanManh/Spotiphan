@@ -43,25 +43,29 @@ export const requirePremiumOrHigher = async (req, res, next) => {
 /**
  * Middleware kiểm tra quyền Admin (Quản lý người dùng, nội dung)
  */
-export const requireAdmin = async (req, res, next) => {
-	try {
-		const currentUser = await clerkClient.users.getUser(req.auth.userId);
-		const isAdmin = process.env.ADMIN_EMAIL === currentUser.primaryEmailAddress?.emailAddress;
-
-		if (!isAdmin) {
-			return res.status(403).json({ message: "Unauthorized - bạn không có quyền admin." });
-		}
-
-		next();
-	} catch (error) {
-		next(error);
-	}
-};
-
 export const requireArtist = async (req, res, next) => {
-    const user = await User.findById(req.auth.userId);
-    if (!user || user.role !== "artist") {
-        return res.status(403).json({ message: "Unauthorized - you must be an artist" });
+    try {
+        const clerkId = req.auth.userId;  // Lấy `clerkId` từ `req.auth.userId`
+
+        // Tìm người dùng trong MongoDB qua `clerkId`
+        const user = await User.findOne({ clerkId });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Kiểm tra role người dùng phải là artist
+        if (user.role !== "artist") {
+            return res.status(403).json({ message: "Unauthorized - you must be an artist" });
+        }
+
+        // Lưu `_id` của người dùng vào `req.userId`
+        req.userId = user._id;
+
+        // Tiếp tục xử lý nếu người dùng là artist
+        next();
+    } catch (error) {
+        console.error("Error in requireArtist middleware:", error);
+        res.status(500).json({ message: "Server error" });
     }
-    next();
 };

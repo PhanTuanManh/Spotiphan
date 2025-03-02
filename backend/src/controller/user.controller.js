@@ -7,7 +7,11 @@ import { Message } from "../models/message.model.js";
 import { Payment } from "../models/payment.model.js";
 import { Song } from "../models/song.model.js";
 import { User } from "../models/user.model.js";
-import { Category } from "../models/category.model.js";
+import { uploadToCloudinary } from "../lib/cloudinary.js"; // Thư viện upload Cloudinary
+import { parseFile } from "music-metadata";
+import path from "path";
+import fs from "fs/promises";
+
 
 // helper function for cloudinary uploads
 const uploadToCloudinary = async (file) => {
@@ -305,179 +309,6 @@ export const updateSubscriptionPlan = async (req, res, next) => {
 };
 
 
-export const createAlbum = async (req, res, next) => {
-    try {
-        const { title, releaseYear, category } = req.body;
-        const { imageFile } = req.files;
-        const artistId = req.auth.userId;
-
-        // Kiểm tra người dùng có phải artist không
-        const artist = await User.findOne({ clerkId: artistId });
-        if (!artist || artist.role !== "artist") {
-            return res.status(403).json({ message: "Only artists can create albums" });
-        }
-
-        // Kiểm tra xem album có bị trùng tên không
-        const existingAlbum = await Album.findOne({ title, artist: artist._id });
-        if (existingAlbum) {
-            return res.status(400).json({ message: "Album with this title already exists" });
-        }
-
-        // Kiểm tra category hợp lệ
-        if (!category || category.length === 0) {
-            return res.status(400).json({ message: "At least one category is required" });
-        }
-        const validCategories = await Category.find({ _id: { $in: category } });
-        if (validCategories.length !== category.length) {
-            return res.status(400).json({ message: "Invalid category" });
-        }
-
-        // Upload ảnh bìa lên Cloudinary
-        if (!imageFile) {
-            return res.status(400).json({ message: "Album cover image is required" });
-        }
-        const imageUrl = await uploadToCloudinary(imageFile);
-
-        // Tạo album mới
-        const album = new Album({
-            title,
-            artist: artist._id,
-            imageUrl,
-            releaseYear,
-            category,
-            status: "pending", // Album cần được duyệt
-        });
-
-        await album.save();
-
-        // Cập nhật category chứa album này
-        await Category.updateMany({ _id: { $in: category } }, { $push: { albums: album._id } });
-
-        res.status(201).json({ message: "Album created successfully and is pending approval", album });
-    } catch (error) {
-        console.error("Error in createAlbum", error);
-        next(error);
-    }
-};
-
-
-export const updateAlbum = async (req, res, next) => {
-    try {
-        const { albumId } = req.params;
-        const { title, releaseYear, category } = req.body;
-        const userId = req.auth.userId;
-
-        // Kiểm tra album có tồn tại không
-        const album = await Album.findById(albumId);
-        if (!album) {
-            return res.status(404).json({ message: "Album not found" });
-        }
-
-        // Chỉ cho phép artist cập nhật album của họ
-        if (album.artist.toString() !== userId) {
-            return res.status(403).json({ message: "You do not have permission to update this album" });
-        }
-
-        // Nếu có category, kiểm tra hợp lệ
-        let validCategories = [];
-        if (category) {
-            validCategories = await Category.find({ _id: { $in: category } });
-            if (validCategories.length !== category.length) {
-                return res.status(400).json({ message: "Some categories are invalid" });
-            }
-        }
-
-        // Cập nhật thông tin album
-        album.title = title || album.title;
-        album.releaseYear = releaseYear || album.releaseYear;
-        album.category = validCategories.map(c => c._id) || album.category;
-
-        await album.save();
-
-        // Cập nhật danh mục
-        if (category) {
-            await Category.updateMany({ _id: { $nin: category } }, { $pull: { albums: album._id } });
-            await Category.updateMany({ _id: { $in: category } }, { $push: { albums: album._id } });
-        }
-        
-        res.status(200).json({ message: "Album updated successfully", album });
-    } catch (error) {
-        next(error);
-    }
-};
-
-export const deleteAlbum = async (req, res, next) => {
-    try {
-        const { albumId } = req.params;
-        const userId = req.auth.userId;
-
-        const album = await Album.findById(albumId);
-        if (!album) {
-            return res.status(404).json({ message: "Album not found" });
-        }
-
-        // Chỉ cho phép artist xóa album của họ
-        if (album.artist.toString() !== userId) {
-            return res.status(403).json({ message: "You do not have permission to delete this album" });
-        }
-
-        // Xóa album khỏi danh mục
-        await Category.updateMany(
-            { albums: albumId },
-            { $pull: { albums: albumId } }
-        );
-
-        await album.remove();
-        res.status(200).json({ message: "Album deleted successfully" });
-    } catch (error) {
-        next(error);
-    }
-};
-
-export const archiveAlbum = async (req, res) => {
-    try {
-        const { albumId } = req.params;
-
-        const album = await Album.findById(albumId);
-        if (!album) {
-            return res.status(404).json({ message: "Album not found" });
-        }
-
-        album.status = "archived";
-        await album.save();
-        await Song.updateMany({ albumId: album._id }, { status: "archived" });
-
-        res.status(200).json({ message: "Album and all its songs archived successfully" });
-    } catch (error) {
-        res.status(500).json({ message: "Error archiving album" });
-    }
-};
-
-
-export const removeSongFromAlbum = async (req, res, next) => {
-    try {
-        const { albumId, songId } = req.params;
-        const userId = req.auth.userId;
-
-        const album = await Album.findById(albumId);
-        if (!album) {
-            return res.status(404).json({ message: "Album not found" });
-        }
-
-        if (album.artist.toString() !== userId) {
-            return res.status(403).json({ message: "Only the artist can remove songs from this album" });
-        }
-
-        album.songs = album.songs.filter(id => id.toString() !== songId);
-        await album.save();
-
-        res.status(200).json({ message: "Song removed from album successfully", album });
-    } catch (error) {
-        next(error);
-    }
-};
-
-
 
 
 /**
@@ -490,10 +321,10 @@ export const createSong = async (req, res, next) => {
             return res.status(400).json({ message: "Vui lòng tải lên đầy đủ tệp âm thanh và ảnh bìa" });
         }
 
-        const { title, albumId, duration, isSingle } = req.body;
+        const { title, albumId, isSingle } = req.body;
         const artistId = req.auth.userId;
 
-        // Kiểm tra xem user có phải artist không
+        // Kiểm tra user có phải artist không
         const artist = await User.findById(artistId);
         if (!artist || artist.role !== "artist") {
             return res.status(403).json({ message: "Chỉ artist mới có quyền thêm bài hát" });
@@ -512,33 +343,46 @@ export const createSong = async (req, res, next) => {
                 return res.status(404).json({ message: "Album không tồn tại" });
             }
 
-            // Kiểm tra xem user có phải chủ album không
+            // Kiểm tra quyền sở hữu album
             if (album.artist.toString() !== artistId) {
                 return res.status(403).json({ message: "Bạn không có quyền thêm bài hát vào album này" });
             }
 
-             // Kiểm tra xem bài hát đã tồn tại trong album chưa
-             const existingSong = await Song.findOne({ title, albumId });
-             if (existingSong) {
-                 return res.status(400).json({ message: "Bài hát này đã tồn tại trong album." });
-             }
+            // Kiểm tra bài hát có bị trùng trong album không
+            const existingSong = await Song.findOne({ title, albumId });
+            if (existingSong) {
+                return res.status(400).json({ message: "Bài hát này đã tồn tại trong album." });
+            }
         }
 
-        // Upload file lên Cloudinary
-        const audioFile = req.files.audioFile;
+        // Upload file ảnh lên Cloudinary
         const imageFile = req.files.imageFile;
-        const audioUrl = await uploadToCloudinary(audioFile);
         const imageUrl = await uploadToCloudinary(imageFile);
 
-        // Tạo bài hát mới
+        // ✅ Lưu file audio vào `public/uploads/` tạm thời trước khi upload lên Cloudinary
+        const audioFile = req.files.audioFile;
+        const tempFilePath = path.join(process.cwd(), "public/uploads", audioFile.name);
+        await audioFile.mv(tempFilePath); // Di chuyển file vào thư mục tạm
+
+        // ✅ Tính `duration` từ file audio
+        const metadata = await parseFile(tempFilePath);
+        const duration = Math.round(metadata.format.duration); // Đơn vị: giây
+
+        // ✅ Upload file audio lên Cloudinary
+        const audioUrl = await uploadToCloudinary(audioFile, "audio"); // Tải lên Cloudinary
+
+        // Xóa file tạm sau khi upload
+        await fs.unlink(tempFilePath);
+
+        // ✅ Tạo bài hát mới trong MongoDB
         const song = new Song({
             title,
             artist: artist._id,
             audioUrl,
             imageUrl,
-            duration,
-            albumId: album ? album._id : null, // Nếu không có album, set null
-            isSingle: !!isSingle, // Nếu không có album, là Single/EP
+            duration, // 🕒 Tự động tính duration
+            albumId: album ? album._id : null,
+            isSingle: !!isSingle,
         });
 
         await song.save();
@@ -551,7 +395,7 @@ export const createSong = async (req, res, next) => {
 
         res.status(201).json({ message: "Bài hát đã được tạo thành công", song });
     } catch (error) {
-        console.log("Lỗi khi tạo bài hát:", error);
+        console.error("❌ Lỗi khi tạo bài hát:", error);
         next(error);
     }
 };

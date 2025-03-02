@@ -19,8 +19,10 @@ import authRoutes from "./routes/auth.route.js";
 import songRoutes from "./routes/song.route.js";
 import statRoutes from "./routes/stat.route.js";
 import userRoutes from "./routes/user.route.js";
+import artistRoutes from "./routes/artist.route.js";
 import playlistRoutes from "./routes/playList.route.js";
 import userListeningHistoryRoutes from "./routes/userListeningHistory.route.js"
+import advertisementRoutes from "./routes/advertisement.route.js"
 
 dotenv.config();
 
@@ -68,6 +70,7 @@ cron.schedule("0 * * * *", () => {
 });
 
 app.use("/api/users", userRoutes);
+app.use("/api/artists", artistRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/songs", songRoutes);
@@ -75,6 +78,8 @@ app.use("/api/albums", albumRoutes);
 app.use("/api/stats", statRoutes);
 app.use("/api/playlists", playlistRoutes);
 app.use("/api/history", userListeningHistoryRoutes);
+app.use("/api/advertisements", advertisementRoutes);
+app.use("/uploads", express.static(path.join(process.cwd(), "public/uploads")));
 
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));

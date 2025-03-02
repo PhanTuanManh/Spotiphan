@@ -2,7 +2,7 @@ import { Category } from "../models/category.model.js";
 import { Playlist } from "../models/playList.model.js";
 import { Song } from "../models/song.model.js";
 import { User } from "../models/user.model.js";
-
+import mongoose from "mongoose";
 /**
  * @route POST /playlists
  * @desc Tạo một playlist mới (công khai hoặc riêng tư)
@@ -110,13 +110,6 @@ export const searchPublicPlaylists = async (req, res, next) => {
     }
 };
 
-
-
-/**
- * @route GET /playlists
- * @desc Lấy danh sách playlist của người dùng hiện tại
- * @access Private
- */
 /**
  * @route GET /playlists
  * @desc Lấy danh sách playlist của người dùng hiện tại (hỗ trợ phân trang)
@@ -124,10 +117,21 @@ export const searchPublicPlaylists = async (req, res, next) => {
  */
 export const getMyPlaylists = async (req, res, next) => {
     try {
-        const userId = req.auth.userId;
+        const clerkId = req.auth.userId;  // Lấy `clerkId` từ req.auth (vì `userId` là Clerk ID)
+
+        // Tìm user trong MongoDB bằng clerkId
+        const user = await User.findOne({ clerkId });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const userId = user._id;  // Sử dụng _id của MongoDB (ObjectId)
+
         const { page = 1, limit = 10 } = req.query;
         const skip = (page - 1) * limit;
 
+        // Tìm playlist của người dùng theo `userId` MongoDB (_id)
         const playlists = await Playlist.find({ userId })
             .populate("songs")
             .limit(parseInt(limit))
@@ -140,12 +144,12 @@ export const getMyPlaylists = async (req, res, next) => {
             totalPages: Math.ceil(total / limit),
             currentPage: parseInt(page),
             playlists,
+            total,
         });
     } catch (error) {
         next(error);
     }
 };
-
 
 /**
  * @route GET /playlists/:playlistId
@@ -378,52 +382,74 @@ export const getTrendingSongs = async (req, res, next) => {
  */
 export const updateTrendingPlaylist = async () => {
     try {
-      console.log("🔄 Đang cập nhật Trending Playlist...");
-  
-      // Lấy 30 bài hát có tổng lượt nghe cao nhất và đã được duyệt
-      const trendingSongs = await Song.find({
-        $or: [
-          { isSingle: true, status: "approved" },
-          { albumId: { $ne: null }, status: "approved" }
-        ]
-      })
-      .populate({
-        path: "albumId",
-        match: { status: "approved" },
-      })
-      .sort({ listenCount: -1 }) // Sắp xếp theo tổng số lượt nghe giảm dần
-      .limit(30) // Lấy 30 bài hát
-      .select("_id");
+        console.log("🔄 Đang cập nhật Trending Playlist...");
 
-      // Lọc bài hát hợp lệ
-      const validSongs = trendingSongs.filter(song => song.isSingle || song.albumId);
+        // **Bước 1: Lấy dữ liệu 7 ngày gần đây**
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      if (validSongs.length === 0) {
-        console.log("⚠️ Không có bài hát nào đủ điều kiện để đưa vào Trending Playlist.");
-        return;
-      }
+        const recentTrendingSongs = await UserListeningHistory.aggregate([
+            {
+                $match: { listenedAt: { $gte: sevenDaysAgo } } // Chỉ lấy lượt nghe trong 7 ngày qua
+            },
+            {
+                $group: { 
+                    _id: "$songId", 
+                    recentPlays: { $sum: 1 }  // Tổng số lượt nghe gần đây
+                }
+            }
+        ]);
 
-      // Kiểm tra xem Playlist "Trending Songs" đã tồn tại chưa
-      let trendingPlaylist = await Playlist.findOne({ name: "Trending Songs" });
+        const recentTrendingMap = new Map(recentTrendingSongs.map(song => [song._id.toString(), song.recentPlays]));
 
-      if (trendingPlaylist) {
-        // Nếu đã tồn tại, cập nhật danh sách bài hát
-        trendingPlaylist.songs = validSongs.map(song => song._id);
-        await trendingPlaylist.save();
-      } else {
-        // Nếu chưa có, tạo mới Playlist Thịnh Hành
-        trendingPlaylist = new Playlist({
-          name: "Trending Songs",
-          userId: null, // Không thuộc người dùng nào
-          songs: validSongs.map(song => song._id),
-          isPublic: true,
+        // **Bước 2: Lấy danh sách bài hát có `listenCount` cao nhất**
+        const trendingSongs = await Song.find({
+            status: "approved"
+        })
+        .sort({ listenCount: -1 }) // Sắp xếp theo tổng số lượt nghe giảm dần
+        .limit(50) // Lấy danh sách lớn hơn 30 để có nhiều lựa chọn
+        .select("_id listenCount isSingle albumId");
+
+        // **Bước 3: Tính toán điểm tổng hợp**
+        const rankedSongs = trendingSongs.map(song => {
+            const recentPlays = recentTrendingMap.get(song._id.toString()) || 0; // Lượt nghe trong 7 ngày qua
+            const totalPlays = song.listenCount; // Tổng số lượt nghe
+
+            // Công thức tính điểm dựa trên Spotify/YouTube logic
+            const score = (totalPlays * 0.7) + (recentPlays * 1.3); // Cân nhắc trọng số
+
+            return { songId: song._id, score };
         });
 
-        await trendingPlaylist.save();
-      }
+        // **Bước 4: Chọn 30 bài hát có điểm cao nhất**
+        rankedSongs.sort((a, b) => b.score - a.score);
+        const topTrendingSongs = rankedSongs.slice(0, 30).map(song => song.songId);
 
-      console.log("✅ Trending Playlist Updated Successfully!");
+        if (topTrendingSongs.length === 0) {
+            console.log("⚠️ Không có bài hát nào đủ điều kiện để đưa vào Trending Playlist.");
+            return;
+        }
+
+        // **Bước 5: Cập nhật hoặc tạo mới Playlist `Trending Songs`**
+        let trendingPlaylist = await Playlist.findOne({ name: "Trending Songs" });
+
+        if (trendingPlaylist) {
+            trendingPlaylist.songs = topTrendingSongs;
+            await trendingPlaylist.save();
+        } else {
+            trendingPlaylist = new Playlist({
+                name: "Trending Songs",
+                userId: null, // Không thuộc người dùng nào
+                songs: topTrendingSongs,
+                isPublic: true,
+                category: [], // Không có thể loại
+            });
+
+            await trendingPlaylist.save();
+        }
+
+        console.log("✅ Trending Playlist Updated Successfully!");
     } catch (error) {
-      console.error("❌ Error updating Trending Playlist:", error);
+        console.error("❌ Error updating Trending Playlist:", error);
     }
 };

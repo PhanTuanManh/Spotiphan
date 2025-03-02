@@ -376,16 +376,56 @@ export const updateSubscriptionPlan = async (req, res, next) => {
 };
 
 export const getAllSubscriptionPlans = async (req, res, next) => {
-	try {
-		const subscriptionPlans = await SubscriptionPlan.find();
-		res.status(200).json(subscriptionPlans);
-	} catch (error) {
-		next(error);
-	}
+    try {
+        const { page = 1, limit = 10 } = req.query;
+        const skip = (page - 1) * limit;
+
+        const totalPlans = await SubscriptionPlan.countDocuments();
+        const subscriptionPlans = await SubscriptionPlan.find()
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        res.status(200).json({
+            totalPlans,
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(totalPlans / limit),
+            subscriptionPlans,
+        });
+    } catch (error) {
+        next(error);
+    }
 };
 
 
+
 // Todo: Advertisement Logic API
+export const getAllAdvertisements = async (req, res, next) => {
+    try {
+        let { page = 1, limit = 10 } = req.query;
+        page = parseInt(page);
+        limit = parseInt(limit);
+
+        const skip = (page - 1) * limit;
+        const ads = await Advertisement.find()
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const totalAds = await Advertisement.countDocuments();
+        const totalPages = Math.ceil(totalAds / limit);
+
+        res.status(200).json({
+            page,
+            totalPages,
+            totalAds,
+            limit,
+            ads,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const createAdvertisement = async (req, res, next) => {
     try {
         const { title, mediaUrl, redirectUrl, duration } = req.body;

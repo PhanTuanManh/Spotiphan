@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { usePlayerStore } from "@/stores/usePlayerStore";
-import { Song } from "@/types";
+import { ISong } from "@/types";
 import { Pause, Play } from "lucide-react";
 
-const PlayButton = ({ song }: { song: Song }) => {
+const PlayButton = ({ song }: { song: ISong }) => {
 	const { currentSong, isPlaying, setCurrentSong, togglePlay } = usePlayerStore();
 	const isCurrentSong = currentSong?._id === song._id;
 

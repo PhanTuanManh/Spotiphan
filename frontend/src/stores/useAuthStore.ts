@@ -1,3 +1,5 @@
+// src/stores/useAuthStore.ts
+
 import { axiosInstance } from "@/lib/axios";
 import { create } from "zustand";
 
@@ -17,21 +19,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
 	checkAdminStatus: async () => {
 		set({ isLoading: true, error: null });
-
 		try {
 			const response = await axiosInstance.get("/admin/check");
-
-			// Kiểm tra dữ liệu phản hồi
-			const isAdmin = response.data?.admin ?? false; // Nếu không có `admin`, mặc định là `false`
-			set({ isAdmin });
+			set({ isAdmin: response.data.admin });
 		} catch (error: any) {
-			console.error("Error checking admin status:", error);
-
-			// Xử lý lỗi từ response hoặc lỗi hệ thống
-			const errorMessage =
-				error.response?.data?.message || "Something went wrong. Please try again.";
-
-			set({ isAdmin: false, error: errorMessage });
+			set({ isAdmin: false, error: error.response.data.message });
 		} finally {
 			set({ isLoading: false });
 		}

@@ -4,9 +4,6 @@ import { clerkClient } from "@clerk/express";
 import { User } from "../models/user.model.js";
 
 export const protectRoute = async (req, res, next) => {
-    console.log("🔹 Headers:", req.headers); // ✅ Log headers để kiểm tra
-    console.log("🔹 Auth Object:", req.auth); // ✅ Log req.auth để kiểm tra
-
     try {
         if (!req.auth || !req.auth.userId) {
             return res.status(401).json({ message: "Unauthorized - Please log in" });
@@ -59,4 +56,5 @@ export const syncUserWithMongoDB = async (req, res, next) => {
 		next(error);
 	}
 };
+
 
