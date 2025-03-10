@@ -1,9 +1,9 @@
 // src/routes/admin.routes.js
 
 import { Router } from "express";
-import { approveAlbum, approveSingleOrEP, checkAdmin, createAdvertisement, createSubscriptionPlan, createUser, deleteAdvertisement, deleteAlbum, deleteSubscriptionPlan, deleteUser, getAllAdvertisements, getAllAlbums, getAllSinglesOrEPs, getAllSubscriptionPlans, getAllUsers, rejectAlbum, rejectSingleOrEP, toggleBlockUser, updateSubscriptionPlan } from "../controller/admin.controller.js";
-import { protectRoute, requireAdmin, syncUserWithMongoDB } from "../middleware/auth.middleware.js";
+import { approveAlbum, approveSingleOrEP, archiveSingleOrEP, checkAdmin, createAdvertisement, createSubscriptionPlan, createUser, deleteAdvertisement, deleteAlbum, deleteSingleOrEP, deleteSubscriptionPlan, deleteUser, getAllAdvertisements, getAllAlbums, getAllSinglesOrEPs, getAllSubscriptionPlans, getAllUsers, rejectAlbum, rejectSingleOrEP, toggleBlockUser, updateSubscriptionPlan } from "../controller/admin.controller.js";
 import { createCategory, deleteCategory, getCategories, getCategoryById, updateCategory } from "../controller/category.controller.js";
+import { protectRoute, requireAdmin, syncUserWithMongoDB } from "../middleware/auth.middleware.js";
 
 const router = Router();
 router.use(protectRoute);
@@ -16,6 +16,8 @@ router.get("/check", checkAdmin);
 router.put("/singles/:songId/approve", syncUserWithMongoDB, approveSingleOrEP);
 router.put("/singles/:songId/reject", syncUserWithMongoDB, rejectSingleOrEP);
 router.get("/singles", syncUserWithMongoDB, getAllSinglesOrEPs);
+router.post("/singles/:songId/archive", syncUserWithMongoDB, archiveSingleOrEP);
+router.delete("/singles/:songId", syncUserWithMongoDB, deleteSingleOrEP);
 
 // **Quản lý Album**
 router.put("/albums/:albumId/approve", syncUserWithMongoDB, approveAlbum);

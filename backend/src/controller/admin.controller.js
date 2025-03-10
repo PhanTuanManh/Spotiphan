@@ -6,33 +6,40 @@ import { Playlist } from "../models/playList.model.js";
 import { Song } from "../models/song.model.js";
 import { SubscriptionPlan } from "../models/subscriptionPlan.model.js";
 import { User } from "../models/user.model.js";
+import { clerkClient } from "@clerk/express";
+import dotenv from "dotenv";
 
+dotenv.config();
 
 // Todo: Single/EP logic API
 export const approveSingleOrEP = async (req, res) => {
     try {
         const { songId } = req.params;
 
-        // Tìm bài hát cần duyệt
+
         const song = await Song.findById(songId);
         if (!song) {
             return res.status(404).json({ message: "Song not found" });
         }
 
-        // Chỉ cho phép duyệt bài hát Single hoặc EP
         if (!song.isSingle) {
             return res.status(400).json({ message: "This song is part of an album. Approve the album instead." });
         }
 
-        // Duyệt bài hát
+        if (song.status === "approved") { 
+            return res.status(400).json({ message: "Song is already approved." });
+        }
+
         song.status = "approved";
         await song.save();
 
+      
         res.status(200).json({ message: "Single/EP approved successfully", song });
-    } catch (error) {
-        res.status(500).json({ message: "Error approving single/EP" });
+    } catch (error) { 
+        res.status(500).json({ message: "Error approving single/EP", error: error.message });
     }
 };
+
 
 export const rejectSingleOrEP = async (req, res) => {
     try {
@@ -47,15 +54,19 @@ export const rejectSingleOrEP = async (req, res) => {
             return res.status(400).json({ message: "This song is part of an album. Reject the album instead." });
         }
 
-        // Từ chối bài hát Single/EP
+        if (song.status === "rejected") {
+            return res.status(400).json({ message: "Song is already rejected." });
+        }
+
         song.status = "rejected";
         await song.save();
 
         res.status(200).json({ message: "Single/EP rejected successfully", song });
     } catch (error) {
-        res.status(500).json({ message: "Error rejecting single/EP" });
+        res.status(500).json({ message: "Error rejecting single/EP", error: error.message });
     }
 };
+
 
 export const getAllSinglesOrEPs = async (req, res) => {
     try {
@@ -93,6 +104,91 @@ export const getAllSinglesOrEPs = async (req, res) => {
         res.status(500).json({ message: "Error retrieving pending singles/EPs" });
     }
 };
+
+export const archiveSingleOrEP = async (req, res) => {
+    try {
+        const { songId } = req.params;
+        const artistId = req.userId;
+
+        const song = await Song.findById(songId);
+        if (!song) {
+            return res.status(404).json({ message: "Song not found" });
+        }
+
+        if (!song.isSingle) {
+            return res.status(400).json({ message: "This song is part of an album. Archive the album instead." });
+        }
+
+        if (song.artist.toString() !== artistId && req.user.role !== "admin") {
+            return res.status(403).json({ message: "You do not have permission to archive this single/EP." });
+        }
+
+        song.status = "archived";
+        await song.save();
+
+        res.status(200).json({ message: "Single/EP archived successfully", song });
+    } catch (error) {
+        res.status(500).json({ message: "Error archiving single/EP", error: error.message });
+    }
+};
+
+export const unarchiveSingleOrEP = async (req, res) => {
+    try {
+        const { songId } = req.params;
+        const artistId = req.userId;
+
+        const song = await Song.findById(songId);
+        if (!song) {
+            return res.status(404).json({ message: "Song not found" });
+        }
+
+        if (!song.isSingle) {
+            return res.status(400).json({ message: "This song is part of an album. Archive the album instead." });
+        }
+
+        if (song.artist.toString() !== artistId && req.user.role !== "admin") {
+            return res.status(403).json({ message: "You do not have permission to archive this single/EP." });
+        }
+
+        song.status = "pending";
+        await song.save()
+
+        res.status(200).json({ message: "Single/EP archived successfully", song });
+    } catch (error) {
+        res.status(500).json({ message: "Error archiving single/EP", error: error.message });
+    }
+};
+
+
+export const deleteSingleOrEP = async (req, res) => {
+    try {
+        const { songId } = req.params;
+
+        // 🔍 Tìm bài hát cần xóa
+        const song = await Song.findById(songId);
+        if (!song) {
+            return res.status(404).json({ message: "Song not found" });
+        }
+
+        if (song.artist.toString() !== req.userId && req.user.role !== "admin") {
+            return res.status(403).json({ message: "You do not have permission to delete this single/EP" });
+        }
+
+        // 🗑 Xóa bài hát khỏi playlist
+        await Playlist.updateMany({ songs: songId }, { $pull: { songs: songId } });
+
+        // 🗑 Xóa lịch sử nghe bài hát
+        await UserListeningHistory.deleteMany({ songId });
+
+        // 🗑 Xóa bài hát khỏi hệ thống
+        await Song.deleteOne({ _id: songId });
+
+        res.status(200).json({ message: "Single/EP deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Error deleting single/EP", error: error.message });
+    }
+};
+
 
 
 // Todo: Album logic API
@@ -147,9 +243,14 @@ export const deleteAlbum = async (req, res) => {
             return res.status(404).json({ message: "Album not found" });
         }
 
+        if (album.artist.toString() !== req.userId && req.user.role !== "admin") {
+            return res.status(403).json({ message: "You do not have permission to delete this album" });
+
+        }
+
         await Song.deleteMany({ albumId: album._id });
 
-        await Album.findByIdAndDelete(albumId);
+        await album.deleteOne();
 
         res.status(200).json({ message: "Album and all its songs deleted successfully" });
     } catch (error) {
@@ -457,6 +558,29 @@ export const deleteAdvertisement = async (req, res, next) => {
 };
 
 
+
+
+
+
 export const checkAdmin = async (req, res, next) => {
-	res.status(200).json({ admin: true });
+    try {
+        const currentUser = await clerkClient.users.getUser(req.auth.userId);
+        const userEmail = currentUser.primaryEmailAddress?.emailAddress;
+        
+        // Kiểm tra nếu email khớp với ADMIN_EMAIL trong env
+        const isAdminByEmail = userEmail === process.env.ADMIN_EMAIL;
+        
+        // Kiểm tra nếu user có role là admin trong database
+        const user = await User.findOne({ clerkId: currentUser.id });
+        const isAdminByRole = user?.role === "admin";
+
+        // Nếu user là admin theo email hoặc role
+        if (isAdminByEmail || isAdminByRole) {
+            return res.status(200).json({ admin: true });
+        }
+
+        return res.status(403).json({ admin: false, message: "Unauthorized - you must be an admin" });
+    } catch (error) {
+        next(error);
+    }
 };

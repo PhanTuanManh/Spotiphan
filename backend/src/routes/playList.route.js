@@ -20,7 +20,7 @@ router.get("/home", getPublicPlaylistsForHome);
 router.get("/search", searchPublicPlaylists);
 
 // **Lấy danh sách playlist của người dùng hiện tại (hỗ trợ phân trang)**
-router.get("/", protectRoute,syncUserWithMongoDB, getMyPlaylists);
+router.get("/my-playlists", protectRoute,syncUserWithMongoDB, getMyPlaylists);
 
 // **Lấy thông tin chi tiết của một playlist**
 router.get("/:playlistId", protectRoute,syncUserWithMongoDB, getPlaylistById);

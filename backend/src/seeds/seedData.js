@@ -1,13 +1,12 @@
+import dotenv from "dotenv";
 import mongoose from "mongoose";
 import { parseFile } from "music-metadata";
-import dotenv from "dotenv";
+import path from "path";
 import { Album } from "../models/album.model.js";
 import { Category } from "../models/category.model.js";
 import { Playlist } from "../models/playList.model.js";
 import { Song } from "../models/song.model.js";
 import { User } from "../models/user.model.js";
-import path from "path";
-import fs from "fs/promises";
 
 dotenv.config();
 
@@ -20,7 +19,7 @@ console.log("📁 Đường dẫn file:", filePath);
 const getAudioDuration = async (filePath) => {
     try {
         const metadata = await parseFile(filePath);
-        return Math.round(metadata.format.duration); // Đơn vị: giây
+        return Math.round(metadata.format.duration);
     } catch (error) {
         console.error(`❌ Lỗi khi lấy duration của file ${filePath}:`, error);
         return 0;
@@ -47,7 +46,7 @@ const seedDatabase = async () => {
             return;
         }
 
-        // ✅ Tạo các danh mục (Category)
+        // ✅ Tạo các danh mục (Categories)
         const categories = await Category.insertMany([
             { name: "Pop", description: "Nhạc Pop thịnh hành", imageUrl: "https://www.diamondart.com.au/cdn/shop/products/Popart-Wow.jpg?v=1716987052" },
             { name: "Rock", description: "Nhạc Rock đỉnh cao", imageUrl: "https://images.unsplash.com/photo-1663436296764-266c211c2360?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
@@ -56,7 +55,7 @@ const seedDatabase = async () => {
         ]);
         console.log("✅ Categories seeded!");
 
-        // ✅ Tạo các album
+        // ✅ Tạo album của artist
         const albums = await Album.insertMany([
             {
                 title: "Greatest Hits",
@@ -80,7 +79,7 @@ const seedDatabase = async () => {
         console.log("✅ Albums seeded!");
 
         // ✅ Lấy `duration` của file nhạc
-        const durations = await getAudioDuration(filePath);
+        const duration = await getAudioDuration(filePath);
 
         // ✅ Tạo bài hát
         const songs = await Song.insertMany([
@@ -89,27 +88,38 @@ const seedDatabase = async () => {
                 artist: artist._id,
                 imageUrl: "https://example.com/song-one.jpg",
                 audioUrl: "/uploads/1.mp3",
-                duration: durations,
+                duration,
                 albumId: albums[0]._id,
                 listenCount: 100,
                 isFeatured: true,
                 status: "approved",
-                isSingle: false
+                isSingle: false,
             },
             {
                 title: "Song Two",
                 artist: artist._id,
                 imageUrl: "https://example.com/song-two.jpg",
                 audioUrl: "/uploads/1.mp3",
-                duration: durations,
+                duration,
                 albumId: albums[0]._id,
                 listenCount: 200,
                 isFeatured: false,
                 status: "approved",
                 isSingle: false,
             },
+            {
+                title: "Single Hit",
+                artist: artist._id,
+                imageUrl: "https://example.com/single-hit.jpg",
+                audioUrl: "/uploads/1.mp3",
+                duration,
+                listenCount: 350,
+                isFeatured: true,
+                status: "approved",
+                isSingle: true,
+            },
         ]);
-        console.log("✅ Songs seeded!");
+        console.log("✅ Songs & Singles seeded!");
 
         // ✅ Cập nhật album với bài hát
         for (let album of albums) {
@@ -118,25 +128,27 @@ const seedDatabase = async () => {
         }
         console.log("✅ Albums updated with songs!");
 
-        // ✅ Cập nhật category với album và playlist
+        // ✅ Cập nhật category với albums
         for (let category of categories) {
             category.albums = albums.filter(album => album.category.includes(category._id)).map(album => album._id);
             await category.save();
         }
         console.log("✅ Categories updated with albums!");
 
-        // ✅ Tạo playlist
+        // ✅ Tạo playlist của admin
         const playlists = await Playlist.insertMany([
             {
                 name: "Admin's Pop Picks",
+                imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEzYkx8QeiFD0IhGVUkkPIg5mGfQI8U4WvGQ&s",
                 userId: admin._id,
-                songs: [songs[0]._id],
+                songs: [songs[0]._id, songs[2]._id],
                 isPublic: true,
                 followers: [],
                 category: [categories[0]._id],
             },
             {
                 name: "Rock Essentials",
+                imageUrl: null,
                 userId: admin._id,
                 songs: [songs[1]._id],
                 isPublic: true,
@@ -146,7 +158,7 @@ const seedDatabase = async () => {
         ]);
         console.log("✅ Playlists seeded!");
 
-        // ✅ Cập nhật category với playlist
+        // ✅ Cập nhật category với playlists
         for (let category of categories) {
             category.playlists = playlists.filter(playlist => playlist.category.includes(category._id)).map(playlist => playlist._id);
             await category.save();

@@ -308,6 +308,36 @@ export const updateSubscriptionPlan = async (req, res, next) => {
 };
 
 
+export const checkArtist = async (req, res, next) => {
+    try {
+        const currentUser = await clerkClient.users.getUser(req.auth.userId);
+        const user = await User.findOne({ clerkId: currentUser.id });
+
+        if (!user || user.role !== "artist") {
+            return res.status(403).json({ artist: false, message: "Unauthorized - you must be an artist" });
+        }
+
+        res.status(200).json({ artist: true });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const checkPremium = async (req, res, next) => {
+    try {
+        const currentUser = await clerkClient.users.getUser(req.auth.userId);
+        const user = await User.findOne({ clerkId: currentUser.id });
+
+        if (!user || user.role !== "premium") {
+            return res.status(403).json({ premium: false, message: "Unauthorized - you must be a premium user" });
+        }
+
+        res.status(200).json({ premium: true });
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 
 /**

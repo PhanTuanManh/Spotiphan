@@ -31,30 +31,36 @@ export const requireAdmin = async (req, res, next) => {
 	}
 };
 
-
 export const syncUserWithMongoDB = async (req, res, next) => {
-	try {
-		const clerkUser = await clerkClient.users.getUser(req.auth.userId);
-		const existingUser = await User.findOne({ clerkId: clerkUser.id });
+    try {
 
-		// Nếu user chưa tồn tại -> Tạo user mới
-		if (!existingUser) {
-			const newUser = new User({
-				clerkId: clerkUser.id,
-				fullName: clerkUser.fullName || "Anonymous",
-				email: clerkUser.primaryEmailAddress?.emailAddress || "",
-				imageUrl: clerkUser.imageUrl || "",
-			});
+        if (!req.auth || !req.auth.userId) {
+            return res.status(401).json({ message: "Unauthorized - User not authenticated" });
+        }
 
-			await newUser.save();
-			console.log("✅ User created in MongoDB:", newUser);
-		}
+        const clerkUser = await clerkClient.users.getUser(req.auth.userId);
 
-		next(); // Tiếp tục xử lý request
-	} catch (error) {
-		console.error("❌ Error syncing user with MongoDB:", error);
-		next(error);
-	}
+        let existingUser = await User.findOne({ clerkId: clerkUser.id });
+
+        if (!existingUser) {
+
+            existingUser = new User({
+                clerkId: clerkUser.id,
+                fullName: clerkUser.firstName + " " + clerkUser.lastName || "Anonymous",
+                email: clerkUser.emailAddresses[0]?.emailAddress || "",
+                imageUrl: clerkUser.imageUrl || "",
+                role: "free" // Đặt role mặc định nếu không có
+            });
+
+            await existingUser.save();
+        }
+
+        req.user = existingUser; // Gán user vào req.user để middleware sau có thể dùng
+        next();
+    } catch (error) {
+        next(error);
+    }
 };
+
 
 

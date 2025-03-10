@@ -19,6 +19,7 @@ export const requireArtistOrAdmin = async (req, res, next) => {
 		next();
 	} catch (error) {
 		next(error);
+		console.log("Error in requireArtistOrAdmin middleware:", error);
 	}
 };
 
@@ -33,7 +34,7 @@ export const requirePremiumOrHigher = async (req, res, next) => {
 		if (!user || (user.role !== "premium" && user.role !== "artist" && user.role !== "admin")) {
 			return res.status(403).json({ message: "Unauthorized - chỉ Premium, Artist hoặc Admin có thể tạo Playlist." });
 		}
-
+		console.log("User role:", user.role);
 		next();
 	} catch (error) {
 		next(error);

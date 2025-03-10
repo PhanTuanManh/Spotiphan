@@ -1,8 +1,10 @@
+import { clerkClient } from "@clerk/express";
 import { Category } from "../models/category.model.js";
 import { Playlist } from "../models/playList.model.js";
 import { Song } from "../models/song.model.js";
 import { User } from "../models/user.model.js";
 import mongoose from "mongoose";
+import { uploadToCloudinary } from "../lib/cloudinary.js";
 /**
  * @route POST /playlists
  * @desc Tạo một playlist mới (công khai hoặc riêng tư)
@@ -10,9 +12,20 @@ import mongoose from "mongoose";
  */
 export const createPlaylist = async (req, res, next) => {
     try {
-        const { name, isPublic, songIds = [], category = [] } = req.body;
+        const { name, isPublic, songIds = [], category = [], imageUrl } = req.body;
         const userId = req.auth.userId;
-        const isAdmin = req.auth.role === "admin"; 
+
+        // Lấy thông tin user từ MongoDB
+        const currentUser = await clerkClient.users.getUser(userId);
+        const user = await User.findOne({ clerkId: currentUser.id });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found in database." });
+        }
+
+        console.log("User data:", user); // Kiểm tra xem có lấy đúng user không
+
+        const isAdmin = user.role === "admin"; 
 
         // Kiểm tra số lượng bài hát
         if (songIds.length > 50) {
@@ -32,16 +45,22 @@ export const createPlaylist = async (req, res, next) => {
             if (validCategories.length !== category.length) {
                 return res.status(400).json({ message: "Some categories are invalid." });
             }
-        } else {
-            if (category.length > 0) {
-                return res.status(403).json({ message: "Only admin can assign categories to playlists." });
-            }
+        } else if (category.length > 0) {
+            return res.status(403).json({ message: "Only admin can assign categories to playlists." });
+        }
+
+        // Nếu không có ảnh, lấy ảnh của bài hát đầu tiên trong danh sách bài hát (nếu có)
+        let finalImageUrl = imageUrl || (approvedSongs.length > 0 ? approvedSongs[0].imageUrl : "");
+
+        if (req.files && req.files.imageFile) {
+            finalImageUrl = await uploadToCloudinary(req.files.imageFile);
         }
 
         // Tạo Playlist
         const newPlaylist = new Playlist({
             name,
-            userId,
+            userId: user._id, // Lưu _id của user từ MongoDB
+            imageUrl: finalImageUrl,
             isPublic: isAdmin ? true : isPublic || false,
             isAdminCreated: isAdmin,
             songs: songIds,
@@ -60,9 +79,11 @@ export const createPlaylist = async (req, res, next) => {
 
         res.status(201).json({ message: "Playlist created successfully", playlist: newPlaylist });
     } catch (error) {
+        console.error("Error creating playlist:", error);
         next(error);
     }
 };
+
 
 
 /**
@@ -185,7 +206,7 @@ export const getPlaylistById = async (req, res, next) => {
 export const updatePlaylist = async (req, res, next) => {
     try {
         const { playlistId } = req.params;
-        const { name, isPublic, category } = req.body;
+        const { name, isPublic, category, imageUrl } = req.body;
         const userId = req.auth.userId;
 
         // Lấy thông tin playlist
@@ -209,6 +230,12 @@ export const updatePlaylist = async (req, res, next) => {
             }
         } else if (category) {
             return res.status(403).json({ message: "Only admin can change categories" });
+        }
+
+        // Nếu không có imageUrl, lấy ảnh từ bài hát đầu tiên trong playlist (nếu có bài hát)
+        let finalImageUrl = imageUrl || playlist.imageUrl;
+        if (!finalImageUrl && playlist.songs.length > 0) {
+            finalImageUrl = playlist.songs[0].imageUrl;
         }
 
         // Cập nhật playlist
@@ -245,10 +272,20 @@ export const updatePlaylist = async (req, res, next) => {
  * @desc Xóa playlist
  * @access Chủ sở hữu playlist
  */
+// delete Playlist and pop it from categories
 export const deletePlaylist = async (req, res, next) => {
     try {
         const { playlistId } = req.params;
-        const userId = req.auth.userId;
+        const clerkId = req.auth.userId; // Lấy `clerkId` từ Clerk
+
+        // 🔹 Lấy `_id` thực từ MongoDB
+        const user = await User.findOne({ clerkId });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const userId = user._id; // MongoDB ObjectId của user
 
         const playlist = await Playlist.findById(playlistId);
         if (!playlist) {
@@ -256,8 +293,7 @@ export const deletePlaylist = async (req, res, next) => {
         }
 
         // Chỉ cho phép chủ playlist hoặc admin xóa
-        const user = await User.findById(userId);
-        if (playlist.userId.toString() !== userId && user.role !== "admin") {
+        if (playlist.userId.toString() !== userId.toString() && user.role !== "admin") {
             return res.status(403).json({ message: "You do not have permission to delete this playlist" });
         }
 
@@ -269,7 +305,7 @@ export const deletePlaylist = async (req, res, next) => {
             );
         }
 
-        await playlist.remove();
+        await playlist.deleteOne({ _id: playlistId });
         res.status(200).json({ message: "Playlist deleted successfully" });
     } catch (error) {
         next(error);
