@@ -63,31 +63,34 @@ const LeftSidebar = () => {
 				</div>
 
 				<ScrollArea className='h-[calc(100vh-300px)]'>
-					<div className='space-y-2'>
-						{isLoading ? (
-							<PlaylistSkeleton />
-						) : (
-							albums.map((album) => (
-								<Link
-									to={`/albums/${album._id}`}
-									key={album._id}
-									className='p-2 hover:bg-zinc-800 rounded-md flex items-center gap-3 group cursor-pointer'
-								>
-									<img
-										src={album.imageUrl}
-										alt='Playlist img'
-										className='size-12 rounded-md flex-shrink-0 object-cover'
-									/>
+  <div className='space-y-2'>
+    {isLoading ? (
+      <PlaylistSkeleton />
+    ) : Array.isArray(albums) ? ( // ✅ Kiểm tra nếu albums là mảng
+      albums.map((album) => (
+        <Link
+          to={`/albums/${album._id}`}
+          key={album._id}
+          className='p-2 hover:bg-zinc-800 rounded-md flex items-center gap-3 group cursor-pointer'
+        >
+          <img
+            src={album.imageUrl}
+            alt='Playlist img'
+            className='size-12 rounded-md flex-shrink-0 object-cover'
+          />
 
-									<div className='flex-1 min-w-0 hidden md:block'>
-										<p className='font-medium truncate'>{album.title}</p>
-										<p className='text-sm text-zinc-400 truncate'>Album • {album.artist}</p>
-									</div>
-								</Link>
-							))
-						)}
-					</div>
-				</ScrollArea>
+          <div className='flex-1 min-w-0 hidden md:block'>
+            <p className='font-medium truncate'>{album.title}</p>
+            <p className='text-sm text-zinc-400 truncate'>Album • {typeof album.artist === "object" ? album.artist.fullName : "Unknown Artist"}</p>
+          </div>
+        </Link>
+      ))
+    ) : (
+      <p className="text-white">No albums found</p> // ✅ Hiển thị thông báo khi không có albums
+    )}
+  </div>
+</ScrollArea>
+
 			</div>
 		</div>
 	);

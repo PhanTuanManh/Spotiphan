@@ -10,60 +10,59 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { axiosInstance } from "@/lib/axios";
-import { useCategoryStore } from "@/stores/useCategoryStore";
+import { usePlaylistStore } from "@/stores/usePlaylistStore";
 import { PencilOff, Upload } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import toast from "react-hot-toast";
 
-interface UpdateCategoryProps {
-	categoryId: string;
+interface UpdatePlaylistProps {
+	playlistId: string;
 }
 
-const UpdateCategoryDialog = ({ categoryId }: UpdateCategoryProps) => {
-	const { getCategories } = useCategoryStore();
-	const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+const UpdatePlaylistDialog = ({ playlistId }: UpdatePlaylistProps) => {
+	const { fetchMyPlaylists } = usePlaylistStore();
+	const [playlistDialogOpen, setPlaylistDialogOpen] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
-	const [category, setCategory] = useState({ name: "", description: "", imageUrl: "" });
+	const [playlist, setPlaylist] = useState({ name: "", imageUrl: "" });
 	const [image, setImage] = useState<File | null>(null);
 	const imageInputRef = useRef<HTMLInputElement>(null);
 
-	// Fetch category data when dialog opens
+	// Fetch Playlist data when dialog opens
     useEffect(() => {
-        const fetchCategory = async () => {
+        const fetchPlaylist = async () => {
             try {
-                const res = await axiosInstance.get(`/admin/categories/${categoryId}`);
-                setCategory(res.data.category || res.data);
+                const res = await axiosInstance.get(`/playlists/${playlistId}`);
+                setPlaylist(res.data.playlist || res.data);
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             } catch (err) {
-                toast.error("Failed to fetch category");
+                toast.error("Failed to fetch Playlist");
             }
         };
 
-        if (categoryDialogOpen && categoryId) {
-            fetchCategory();
+        if (playlistDialogOpen && playlistId) {
+            fetchPlaylist();
         }
-    }, [categoryId, categoryDialogOpen]);
+    }, [playlistId, playlistDialogOpen]);
     
 
 	const handleSubmit = async () => {
 		setIsLoading(true);
 		try {
 			const formData = new FormData();
-			formData.append("name", category.name);
-			formData.append("description", category.description);
+			formData.append("name", playlist.name);
 			if (image) {
 				formData.append("imageFile", image);
 			}
 
-			await axiosInstance.put(`/admin/categories/${categoryId}`, formData, {
+			await axiosInstance.put(`/playlists/${playlistId}`, formData, {
 				headers: { "Content-Type": "multipart/form-data" },
 			});
 
-			toast.success("Category updated successfully");
-			getCategories();
-			setCategoryDialogOpen(false);
+			toast.success("Playlist updated successfully");
+			fetchMyPlaylists();
+			setPlaylistDialogOpen(false);
 		} catch (error: any) {
-			toast.error("Failed to update category: " + error.message);
+			toast.error("Failed to update Playlist: " + error.message);
 		} finally {
 			setIsLoading(false);
 		}
@@ -72,11 +71,11 @@ const UpdateCategoryDialog = ({ categoryId }: UpdateCategoryProps) => {
 
 	return (
 		<Dialog
-			open={categoryDialogOpen}
+			open={playlistDialogOpen}
 			onOpenChange={(isOpen) => {
-				setCategoryDialogOpen(isOpen);
+				setPlaylistDialogOpen(isOpen);
 				if (!isOpen) {
-					setCategory({ name: "", description: "", imageUrl: "" }); // Reset data when closing
+					setPlaylist({ name: "", imageUrl: "" }); // Reset data when closing
 				}
 			}}
 		>
@@ -92,8 +91,8 @@ const UpdateCategoryDialog = ({ categoryId }: UpdateCategoryProps) => {
 
 			<DialogContent className="bg-zinc-900 border-zinc-700 max-h-[80vh] overflow-auto">
 				<DialogHeader>
-					<DialogTitle>Update Category</DialogTitle>
-					<DialogDescription>Modify category details</DialogDescription>
+					<DialogTitle>Update Playlist</DialogTitle>
+					<DialogDescription>Modify Playlist details</DialogDescription>
 				</DialogHeader>
 
 				<div className="space-y-4 py-4">
@@ -120,7 +119,7 @@ const UpdateCategoryDialog = ({ categoryId }: UpdateCategoryProps) => {
 									<div className="p-3 bg-zinc-800 rounded-full inline-block mb-2">
 										<Upload className="h-6 w-6 text-zinc-400" />
 									</div>
-									<div className="text-sm text-zinc-400 mb-2">Upload new category image</div>
+									<div className="text-sm text-zinc-400 mb-2">Upload new Playlist image</div>
 									<Button variant="outline" size="sm" className="text-xs">Choose File</Button>
 								</>
 							)}
@@ -128,30 +127,22 @@ const UpdateCategoryDialog = ({ categoryId }: UpdateCategoryProps) => {
 					</div>
 
 					<div className="space-y-2">
-						<label className="text-sm font-medium">Category Name</label>
+						<label className="text-sm font-medium">Playlist Name</label>
 						<Input
-							value={category.name}
-							onChange={(e) => setCategory({ ...category, name: e.target.value })}
+							value={playlist.name}
+							onChange={(e) => setPlaylist({ ...playlist, name: e.target.value })}
 							className="bg-zinc-800 border-zinc-700"
 						/>
 					</div>
 
-					<div className="space-y-2">
-						<label className="text-sm font-medium">Description</label>
-						<Input
-							value={category.description}
-							onChange={(e) => setCategory({ ...category, description: e.target.value })}
-							className="bg-zinc-800 border-zinc-700"
-						/>
-					</div>
 				</div>
 
 				<DialogFooter>
-					<Button variant="outline" onClick={() => setCategoryDialogOpen(false)} disabled={isLoading}>
+					<Button variant="outline" onClick={() => setPlaylistDialogOpen(false)} disabled={isLoading}>
 						Cancel
 					</Button>
 					<Button onClick={handleSubmit} disabled={isLoading}>
-						{isLoading ? "Updating..." : "Update Category"}
+						{isLoading ? "Updating..." : "Update Playlist"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>
@@ -159,4 +150,4 @@ const UpdateCategoryDialog = ({ categoryId }: UpdateCategoryProps) => {
 	);
 };
 
-export default UpdateCategoryDialog;
+export default UpdatePlaylistDialog;

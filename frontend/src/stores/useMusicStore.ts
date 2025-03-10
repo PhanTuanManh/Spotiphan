@@ -113,9 +113,16 @@ export const useMusicStore = create<MusicStore>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axiosInstance.get("/albums");
-      set({ albums: response.data });
+      const albumsData = response.data.albums;
+  
+      if (!Array.isArray(albumsData)) {
+        console.error("API returned non-array albums:", albumsData);
+        set({ albums: [] }); // ✅ Đảm bảo albums luôn là mảng
+      } else {
+        set({ albums: albumsData });
+      }
     } catch (error: any) {
-      set({ error: error.message });
+      set({ error: error.message, albums: [] }); // ✅ Tránh lỗi nếu API thất bại
     } finally {
       set({ isLoading: false });
     }

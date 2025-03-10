@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import { axiosInstance } from "@/lib/axios";  // Đảm bảo axiosInstance đã được cấu hình
-import { IAlbum } from "@/types";  // Đảm bảo kiểu dữ liệu từ types/index.ts
+import { axiosInstance } from "@/lib/axios";
+import { IAlbum } from "@/types";
 import toast from "react-hot-toast";
+import { create } from "zustand";
 
 interface AlbumStore {
   albums: IAlbum[];
@@ -9,11 +9,18 @@ interface AlbumStore {
   isLoading: boolean;
   error: string | null;
 
-  fetchAlbums: () => Promise<void>;
+  fetchApprovedAlbums: () => Promise<void>;
+  fetchAllAlbumsAdmin: () => Promise<void>;
+  fetchMyAlbums: () => Promise<void>;
   fetchAlbumById: (id: string) => Promise<void>;
-  createAlbum: (albumData: IAlbum) => Promise<void>;
-  updateAlbum: (id: string, albumData: IAlbum) => Promise<void>;
+  createAlbum: (albumData: FormData) => Promise<void>;
+  updateAlbum: (id: string, albumData: Partial<IAlbum>) => Promise<void>;
   deleteAlbum: (id: string) => Promise<void>;
+  approveAlbum: (id: string) => Promise<void>;
+  rejectAlbum: (id: string) => Promise<void>;
+  archiveAlbum: (id: string) => Promise<void>;
+  unarchiveAlbum: (id: string) => Promise<void>;
+  removeSongFromAlbum: (albumId: string, songId: string) => Promise<void>;
 }
 
 export const useAlbumStore = create<AlbumStore>((set) => ({
@@ -22,15 +29,51 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
   isLoading: false,
   error: null,
 
-  // Fetch all albums
-  fetchAlbums: async () => {
+  // Fetch approved albums (public)
+  fetchApprovedAlbums: async () => {
     set({ isLoading: true, error: null });
     try {
       const response = await axiosInstance.get("/albums");
-      set({ albums: response.data });
+      set({ albums: response.data.albums });
     } catch (error: any) {
       set({ error: error.message });
-      toast.error("Failed to fetch albums");
+      
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // Fetch all albums (Admin only)
+  fetchAllAlbumsAdmin: async () => {
+    set({ isLoading: true, error: null });
+  
+    try {
+      console.log("🔹 Fetching albums as admin...");
+      console.log("🔹 Current Axios Headers:", axiosInstance.defaults.headers);
+  
+      const response = await axiosInstance.get("/admin/albums");
+      set({ albums: response.data.albums });
+  
+    
+    } catch (error: any) {
+      set({ error: error.message });
+     
+      console.error("❌ Error:", error.response || error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  
+
+  // Fetch artist's own albums
+  fetchMyAlbums: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.get("/artist/my-albums");
+      set({ albums: response.data.albums });
+    } catch (error: any) {
+      set({ error: error.message });
+    
     } finally {
       set({ isLoading: false });
     }
@@ -44,43 +87,45 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
       set({ currentAlbum: response.data });
     } catch (error: any) {
       set({ error: error.message });
-      toast.error("Failed to fetch album details");
+   
     } finally {
       set({ isLoading: false });
     }
   },
 
   // Create a new album (Artist only)
-  createAlbum: async (albumData: IAlbum) => {
+  createAlbum: async (albumData: FormData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post("/albums", albumData);
+      const response = await axiosInstance.post("/artist/albums", albumData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       set((state) => ({
-        albums: [...state.albums, response.data],
+        albums: [...state.albums, response.data.album],
       }));
-      toast.success("Album created successfully");
+      
     } catch (error: any) {
       set({ error: error.message });
-      toast.error("Failed to create album");
+     
     } finally {
       set({ isLoading: false });
     }
   },
 
   // Update an existing album (Artist only)
-  updateAlbum: async (id: string, albumData: IAlbum) => {
+  updateAlbum: async (id: string, albumData: Partial<IAlbum>) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.put(`/albums/${id}`, albumData);
+      const response = await axiosInstance.put(`/artist/albums/${id}`, albumData);
       set((state) => ({
         albums: state.albums.map((album) =>
-          album._id === id ? response.data : album
+          album._id === id ? response.data.album : album
         ),
       }));
-      toast.success("Album updated successfully");
+   
     } catch (error: any) {
       set({ error: error.message });
-      toast.error("Failed to update album");
+    
     } finally {
       set({ isLoading: false });
     }
@@ -94,10 +139,105 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
       set((state) => ({
         albums: state.albums.filter((album) => album._id !== id),
       }));
-      toast.success("Album deleted successfully");
+    
     } catch (error: any) {
       set({ error: error.message });
-      toast.error("Failed to delete album");
+     
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // Approve an album (Admin only)
+  approveAlbum: async (id: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await axiosInstance.put(`/admin/albums/${id}/approve`);
+      set((state) => ({
+        albums: state.albums.map((album) =>
+          album._id === id ? { ...album, status: "approved" } : album
+        ),
+      }));
+     
+    } catch (error: any) {
+      set({ error: error.message });
+   
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // Reject an album (Admin only)
+  rejectAlbum: async (id: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await axiosInstance.put(`/admin/albums/${id}/reject`);
+      set((state) => ({
+        albums: state.albums.map((album) =>
+          album._id === id ? { ...album, status: "rejected" } : album
+        ),
+      }));
+   
+    } catch (error: any) {
+      set({ error: error.message });
+   
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  archiveAlbum: async (id: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await axiosInstance.put(`/albums/${id}/archive`);
+      set((state) => ({
+        albums: state.albums.map((album) =>
+          album._id === id ? { ...album, status: "archived" } : album
+        ),
+      }));
+      toast.success("Album archived successfully");
+    } catch (error: any) {
+      set({ error: error.message });
+      toast.error("Failed to archive album");
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  
+  unarchiveAlbum: async (id: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await axiosInstance.put(`/albums/${id}/unarchive`);
+      set((state) => ({
+        albums: state.albums.map((album) =>
+          album._id === id ? { ...album, status: "pending" } : album
+        ),
+      }));
+      toast.success("Album unarchived successfully");
+    } catch (error: any) {
+      set({ error: error.message });
+      toast.error("Failed to unarchive album");
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  
+  // Remove a song from an album (Artist only)
+  removeSongFromAlbum: async (albumId: string, songId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await axiosInstance.put(`/artist/albums/${albumId}/remove-song/${songId}`);
+      set((state) => ({
+        albums: state.albums.map((album) =>
+          album._id === albumId
+            ? { ...album, songs: album.songs.filter((song) => song !== songId) }
+            : album
+        ),
+      }));
+     
+    } catch (error: any) {
+      set({ error: error.message });
+     
     } finally {
       set({ isLoading: false });
     }

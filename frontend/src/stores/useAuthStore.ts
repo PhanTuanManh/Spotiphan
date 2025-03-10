@@ -29,6 +29,18 @@ export const useAuthStore = create<AuthStore>((set) => ({
 		}
 	},
 
+	checkArtistStatus: async () => {
+		set({ isLoading: true, error: null });
+		try {
+			const response = await axiosInstance.get("/artist/check");
+			set({ isAdmin: response.data.artist });
+		} catch (error: any) {
+			set({ isAdmin: false, error: error.response.data.message });
+		} finally {
+			set({ isLoading: false });
+		}
+	},
+
 	reset: () => {
 		set({ isAdmin: false, isLoading: false, error: null });
 	},

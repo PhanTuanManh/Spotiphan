@@ -3,12 +3,12 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useMusicStore } from "@/stores/useMusicStore";
 import { Album, ChartBarIcon, ListVideo, Music } from "lucide-react";
 import { useEffect } from "react";
-import AlbumsTabContent from "./components/AlbumsTabContent";
-import PlaylistsTabContent from "./components/PlaylistsTabContent";
+import AlbumsTabContent from "./components/Album/AlbumsTabContent";
+import CategoriesTabContent from "./components/Category/CategoriesTabContent";
 import DashboardStats from "./components/DashboardStats";
 import Header from "./components/Header";
-import CategoriesTabContent from "./components/CategoriesTabContent";
-import SongsTabContent from "./components/SongsTabContent";   
+import PlaylistsTabContent from "./components/Playlist/PlaylistsTabContent";
+import SinglesTabContent from "./components/Single/SinglesTabContent";
 
 
 const AdminPage = () => {
@@ -37,7 +37,7 @@ const AdminPage = () => {
 				<TabsList className='p-1 bg-zinc-800/50'>
 					<TabsTrigger value='songs' className='data-[state=active]:bg-zinc-700'>
 						<Music className='mr-2 size-4' />
-						Songs
+						Singles
 					</TabsTrigger>
 					<TabsTrigger value='albums' className='data-[state=active]:bg-zinc-700'>
 						<Album className='mr-2 size-4' />
@@ -54,7 +54,7 @@ const AdminPage = () => {
 				</TabsList>
 
 				<TabsContent value='songs'>
-					<SongsTabContent />
+					<SinglesTabContent />
 				</TabsContent>
 				<TabsContent value='albums'>
 					<AlbumsTabContent />

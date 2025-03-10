@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useCategoryStore } from "@/stores/useCategoryStore";
-import { Trash2 } from "lucide-react";
+import { RefreshCcw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import UpdateCategoryDialog from "./UpdateCategoryDialog";
 import ModalConfirm from "@/components/ui/modalConfirm";
@@ -40,7 +40,7 @@ const removeDiacritics = (str: string) => {
 };
 
 const CategoriesTable = () => {
-  const { categories, deleteCategory, getCategories } = useCategoryStore();
+  const { categories, deleteCategory, getCategories, isLoading } = useCategoryStore();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -59,13 +59,13 @@ const CategoriesTable = () => {
     }
   };
 
-  const filteredCategories = categories.filter((category) => {
+  const filteredCategories = Array.isArray(categories) ? categories.filter((category) => {
     const normalizedSearchTerm = removeDiacritics(
       debouncedSearchTerm.toLowerCase()
     );
     const normalizedName = removeDiacritics(category.name.toLowerCase());
     return normalizedName.includes(normalizedSearchTerm);
-  });
+  }): [];
 
   return (
     <>
@@ -80,7 +80,7 @@ const CategoriesTable = () => {
       )}
 
       {/* Search */}
-      <div className="mb-4">
+      <div className="mb-4 flex justify-between items-center">
         <input
           type="text"
           placeholder="Search categories..."
@@ -88,6 +88,14 @@ const CategoriesTable = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full p-2 border border-zinc-800 rounded bg-zinc-900 text-zinc-100"
         />
+        <Button
+          variant="outline"
+          className="ml-4"
+          onClick={getCategories}
+          disabled={isLoading}
+        >
+          <RefreshCcw className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
+        </Button>
       </div>
 
       {/* Categories Table */}
@@ -95,7 +103,7 @@ const CategoriesTable = () => {
         <TableHeader>
           <TableRow className="hover:bg-zinc-800/50">
             <TableHead className="w-[50px]"></TableHead>
-            <TableHead>Name</TableHead>
+            <TableHead>Titile</TableHead>
             <TableHead>Description</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>

@@ -75,7 +75,8 @@ export interface BaseModel {
   export interface IPlaylist extends BaseModel {
 	name: string;
 	userId: string;
-	songs: string[];      // mảng song id
+	imageUrl: string;
+	songs: { _id: string; title: string }[];      // mảng song id
 	isPublic: boolean;
 	followers: string[];  // mảng user id
 	category: string[];   // mảng category id
