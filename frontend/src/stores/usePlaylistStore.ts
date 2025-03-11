@@ -72,6 +72,7 @@ export const usePlaylistStore = create<PlaylistStore>((set) => ({
   createPlaylist: async (playlistData: IPlaylist) => {
     set({ isLoading: true, error: null });
     try {
+      console.log("🟢 Creating playlist with data:", playlistData);
       await axiosInstance.post("/playlists", playlistData);
       await usePlaylistStore.getState().fetchMyPlaylists();
       toast.success("Playlist created successfully");
@@ -140,11 +141,16 @@ export const usePlaylistStore = create<PlaylistStore>((set) => ({
   removeSongFromPlaylist: async (songId: string, playlistId: string) => {
     set({ isLoading: true, error: null });
     try {
-      await axiosInstance.delete(`/playlists/${playlistId}/remove-song`, { data: { songId } });
+      await axiosInstance.delete(`/playlists/${playlistId}/remove-song`, {
+        data: { songId },
+      });
       set((state) => ({
         playlists: state.playlists.map((playlist) =>
           playlist._id === playlistId
-            ? { ...playlist, songs: playlist.songs.filter((song) => song._id !== songId) }
+            ? {
+                ...playlist,
+                songs: playlist.songs.filter((song) => song._id !== songId),
+              }
             : playlist
         ),
       }));
@@ -161,7 +167,9 @@ export const usePlaylistStore = create<PlaylistStore>((set) => ({
   searchPlaylists: async (searchTerm: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(`/playlists/search?query=${searchTerm}`);
+      const response = await axiosInstance.get(
+        `/playlists/search?query=${searchTerm}`
+      );
       set({ playlists: response.data });
     } catch (error: any) {
       set({ error: error.message });

@@ -38,17 +38,32 @@ const removeDiacritics = (str: string) => {
 };
 
 const PlaylistTable = () => {
-  const { playlists, fetchMyPlaylists, createPlaylist, updatePlaylist, deletePlaylist, isLoading } = usePlaylistStore();
+  const {
+    playlists,
+    fetchMyPlaylists,
+    createPlaylist,
+    updatePlaylist,
+    deletePlaylist,
+    isLoading,
+  } = usePlaylistStore();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  
-  const [editingPlaylist, setEditingPlaylist] = useState<{ id: string; name: string } | null>(null);
-  const [selectedPlaylistDelete, setSelectedPlaylistDelete] = useState<string | null>(null);
+
+  const [editingPlaylist, setEditingPlaylist] = useState<{
+    id: string;
+    name: string;
+    isPublic: boolean;
+    category: string[];
+  } | null>(null);
+  const [selectedPlaylistDelete, setSelectedPlaylistDelete] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     fetchMyPlaylists();
   }, [fetchMyPlaylists]);
 
+  console.log("playlists", playlists);
 
   const handleDeletePlaylist = async () => {
     if (selectedPlaylistDelete) {
@@ -57,17 +72,19 @@ const PlaylistTable = () => {
       fetchMyPlaylists(); // ✅ Refresh danh sách sau khi xóa
     }
   };
-  
-  // Filter Playlists
-  const filteredPlaylists = Array.isArray(playlists) && playlists.length > 0
-  ? playlists.filter((playlist) => {
-      if (!playlist.name) return false;
-      const normalizedSearchTerm = removeDiacritics(debouncedSearchTerm.toLowerCase());
-      const normalizedName = removeDiacritics(playlist.name.toLowerCase());
-      return normalizedName.includes(normalizedSearchTerm);
-    })
-  : [];
 
+  // Filter Playlists
+  const filteredPlaylists =
+    Array.isArray(playlists) && playlists.length > 0
+      ? playlists.filter((playlist) => {
+          if (!playlist.name) return false;
+          const normalizedSearchTerm = removeDiacritics(
+            debouncedSearchTerm.toLowerCase()
+          );
+          const normalizedName = removeDiacritics(playlist.name.toLowerCase());
+          return normalizedName.includes(normalizedSearchTerm);
+        })
+      : [];
 
   return (
     <>
@@ -94,27 +111,28 @@ const PlaylistTable = () => {
           variant="outline"
           className="ml-4"
           onClick={fetchMyPlaylists}
-          disabled={isLoading}
-        >
-          <RefreshCcw className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
+          disabled={isLoading}>
+          <RefreshCcw
+            className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
+          />
         </Button>
       </div>
-
 
       {/* Playlists Table */}
       <Table>
         <TableHeader>
-        <TableRow className="hover:bg-zinc-800/50">
-        <TableHead className="w-[50px]"></TableHead>
+          <TableRow className="hover:bg-zinc-800/50">
+            <TableHead className="w-[50px]"></TableHead>
             <TableHead>Title</TableHead>
             <TableHead>Songs</TableHead>
+            <TableHead>Categories</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredPlaylists.map((playlist) => (
             <TableRow key={playlist._id}>
-               <TableCell>
+              <TableCell>
                 <img
                   src={playlist.imageUrl}
                   alt={playlist.name}
@@ -126,7 +144,12 @@ const PlaylistTable = () => {
                   <input
                     type="text"
                     value={editingPlaylist.name}
-                    onChange={(e) => setEditingPlaylist({ ...editingPlaylist, name: e.target.value })}
+                    onChange={(e) =>
+                      setEditingPlaylist({
+                        ...editingPlaylist,
+                        name: e.target.value,
+                      })
+                    }
                     className="p-1 border border-gray-300 rounded"
                   />
                 ) : (
@@ -134,15 +157,18 @@ const PlaylistTable = () => {
                 )}
               </TableCell>
               <TableCell>{playlist.songs.length} Songs</TableCell>
+              <TableCell>
+                {playlist.category &&
+                  playlist.category.map((category) => category.name).join(", ")}
+              </TableCell>
               <TableCell className="text-right">
-              <div className="flex gap-2 justify-end">
+                <div className="flex gap-2 justify-end">
                   <UpdatePlaylistDialog playlistId={playlist._id} />
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setSelectedPlaylistDelete(playlist._id)} // ✅ Set playlist khi nhấn Delete
-                    className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                  >
+                    className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
