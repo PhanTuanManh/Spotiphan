@@ -1,10 +1,9 @@
 import { clerkClient } from "@clerk/express";
+import { uploadToCloudinary } from "../lib/cloudinary.js";
 import { Category } from "../models/category.model.js";
 import { Playlist } from "../models/playList.model.js";
 import { Song } from "../models/song.model.js";
 import { User } from "../models/user.model.js";
-import mongoose from "mongoose";
-import { uploadToCloudinary } from "../lib/cloudinary.js";
 /**
  * @route POST /playlists
  * @desc Tạo một playlist mới (công khai hoặc riêng tư)
@@ -239,8 +238,6 @@ export const updatePlaylist = async (req, res, next) => {
       return res.status(400).json({ message: "Category must be an array." });
     }
 
-    console.log("🟢 Parsed category array for update:", category);
-
     // Lấy thông tin playlist
     const playlist = await Playlist.findById(playlistId);
     if (!playlist) {
@@ -253,6 +250,10 @@ export const updatePlaylist = async (req, res, next) => {
       return res.status(403).json({
         message: "You do not have permission to update this playlist",
       });
+    }
+
+    if (req.files && req.files.imageFile) {
+      finalImageUrl = await uploadToCloudinary(req.files.imageFile);
     }
     // Nếu có category, chỉ admin mới được thay đổi
     let validCategories = [];
@@ -364,33 +365,49 @@ export const addSongToPlaylist = async (req, res, next) => {
   try {
     const { playlistId } = req.params;
     const { songId } = req.body;
-    const userId = req.auth.userId;
+    const clerkId = req.auth.userId;
 
+    // 🔹 Find User by Clerk ID
+    const user = await User.findOne({ clerkId });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const userId = user._id.toString(); // ✅ Convert to string for comparison
+
+    // 🔹 Find Playlist
     const playlist = await Playlist.findById(playlistId);
-
-    if (!playlist)
+    if (!playlist) {
       return res.status(404).json({ message: "Playlist không tồn tại" });
+    }
+
+    // 🔹 Ensure user is the owner
     if (playlist.userId.toString() !== userId) {
       return res
         .status(403)
         .json({ message: "Bạn không có quyền sửa playlist này" });
     }
 
-    const song = await Song.findById(songId);
-    if (!song)
-      return res.status(404).json({ message: "Bài hát không tồn tại" });
-
-    if (!playlist.songs.includes(songId)) {
-      playlist.songs.push(songId);
-      await playlist.save();
-    } else {
-      return res.status(400).json({ message: "Bài hát đã có trong playlist" });
+    // 🔹 Find and Verify Song
+    const song = await Song.findOne({ _id: songId, status: "approved" });
+    if (!song) {
+      return res
+        .status(404)
+        .json({ message: "Bài hát không tồn tại hoặc chưa được duyệt" });
     }
 
-    res
-      .status(200)
-      .json({ message: "Bài hát đã được thêm vào playlist", playlist });
+    // 🔹 Add Song to Playlist (Avoiding Duplicates)
+    const updatedPlaylist = await Playlist.findByIdAndUpdate(
+      playlistId,
+      { $addToSet: { songs: song._id } }, // ✅ Prevents duplicates
+      { new: true }
+    );
+
+    res.status(200).json({
+      message: "Bài hát đã được thêm vào playlist",
+      playlist: updatedPlaylist,
+    });
   } catch (error) {
+    console.error("❌ Error adding song to playlist:", error);
     next(error);
   }
 };
@@ -404,7 +421,14 @@ export const removeSongFromPlaylist = async (req, res, next) => {
   try {
     const { playlistId } = req.params;
     const { songId } = req.body;
-    const userId = req.auth.userId;
+    const clerkId = req.auth.userId;
+
+    // 🔹 Find User by Clerk ID
+    const user = await User.findOne({ clerkId });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const userId = user._id.toString(); // ✅ Convert to string for comparison
 
     const playlist = await Playlist.findById(playlistId);
     if (!playlist)

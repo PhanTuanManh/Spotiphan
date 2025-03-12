@@ -117,17 +117,9 @@ export const usePlaylistStore = create<PlaylistStore>((set) => ({
   addSongToPlaylist: async (songId: string, playlistId: string) => {
     set({ isLoading: true, error: null });
     try {
+      console.log(`🟢 Adding song ${songId} to playlist ${playlistId}...`);
       await axiosInstance.post(`/playlists/${playlistId}/add-song`, { songId });
-      set((state) => ({
-        playlists: state.playlists.map((playlist) =>
-          playlist._id === playlistId
-            ? {
-                ...playlist,
-                songs: [...playlist.songs, { _id: songId, title: "" }],
-              }
-            : playlist
-        ),
-      }));
+      await usePlaylistStore.getState().fetchMyPlaylists();
       toast.success("Song added to playlist successfully");
     } catch (error: any) {
       set({ error: error.message });
@@ -144,16 +136,7 @@ export const usePlaylistStore = create<PlaylistStore>((set) => ({
       await axiosInstance.delete(`/playlists/${playlistId}/remove-song`, {
         data: { songId },
       });
-      set((state) => ({
-        playlists: state.playlists.map((playlist) =>
-          playlist._id === playlistId
-            ? {
-                ...playlist,
-                songs: playlist.songs.filter((song) => song._id !== songId),
-              }
-            : playlist
-        ),
-      }));
+      await usePlaylistStore.getState().fetchMyPlaylists();
       toast.success("Song removed from playlist successfully");
     } catch (error: any) {
       set({ error: error.message });

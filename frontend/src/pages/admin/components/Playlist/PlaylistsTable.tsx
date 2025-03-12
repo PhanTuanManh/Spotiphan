@@ -12,6 +12,8 @@ import { usePlaylistStore } from "@/stores/usePlaylistStore";
 import { RefreshCcw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import UpdatePlaylistDialog from "./UpdatePlaylistDialog";
+import AddSongToPlaylistDialog from "./AddSongToPlaylistDialog";
+import RemoveSongFromPlaylistDialog from "./RemoveSongFromPlaylistDialog";
 
 // Custom Hook for Debouncing Search Input
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -62,8 +64,6 @@ const PlaylistTable = () => {
   useEffect(() => {
     fetchMyPlaylists();
   }, [fetchMyPlaylists]);
-
-  console.log("playlists", playlists);
 
   const handleDeletePlaylist = async () => {
     if (selectedPlaylistDelete) {
@@ -163,6 +163,8 @@ const PlaylistTable = () => {
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex gap-2 justify-end">
+                  <AddSongToPlaylistDialog playlistId={playlist._id} />
+                  <RemoveSongFromPlaylistDialog playlistId={playlist._id} />
                   <UpdatePlaylistDialog playlistId={playlist._id} />
                   <Button
                     variant="ghost"

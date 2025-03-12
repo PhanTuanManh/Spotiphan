@@ -78,13 +78,10 @@ const UpdatePlaylistDialog = ({ playlistId }: UpdatePlaylistProps) => {
     if (dialogOpen) {
       setSelectedCategories([...playlist.category]);
     }
-    console.log("🟢 Current Playlist Data:", playlist);
   }, [dialogOpen, playlist.category]);
 
   // ✅ Handle category selection
   const handleCategorySelect = (categoryIds: string[]) => {
-    console.log("🟢 New category selection:", categoryIds);
-
     setSelectedCategories(categoryIds);
     setPlaylist((prev) => ({
       ...prev,
@@ -96,11 +93,6 @@ const UpdatePlaylistDialog = ({ playlistId }: UpdatePlaylistProps) => {
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
-      console.log(
-        "🟢 Final selected categories before submitting:",
-        selectedCategories
-      );
-
       const formData = new FormData();
       formData.append("name", playlist.name);
       formData.append("isPublic", JSON.stringify(playlist.isPublic));
@@ -110,11 +102,6 @@ const UpdatePlaylistDialog = ({ playlistId }: UpdatePlaylistProps) => {
 
       if (image) {
         formData.append("imageFile", image);
-      }
-
-      console.log("🟢 FormData being sent for update:");
-      for (const pair of formData.entries()) {
-        console.log(`🔍 ${pair[0]}:`, pair[1]);
       }
 
       await axiosInstance.put(`/playlists/${playlistId}`, formData, {
