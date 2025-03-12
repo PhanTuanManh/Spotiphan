@@ -11,7 +11,7 @@ import PlaylistsTabContent from "./components/Playlist/PlaylistsTabContent";
 import SinglesTabContent from "./components/Single/SinglesTabContent";
 import AdsTabContent from "./components/Ads/AdsTabContent";
 
-const AdminPage = () => {
+const ArtistPage = () => {
   const { role, isLoading } = useAuthStore();
 
   const { fetchAlbums, fetchSongs, fetchStats } = useMusicStore();
@@ -22,7 +22,7 @@ const AdminPage = () => {
     fetchStats();
   }, [fetchAlbums, fetchSongs, fetchStats]);
 
-  if (role !== "admin" && !isLoading) return <div>Unauthorized</div>;
+  if (role !== "artist" && !isLoading) return <div>Unauthorized</div>;
 
   return (
     <div
@@ -83,4 +83,4 @@ const AdminPage = () => {
     </div>
   );
 };
-export default AdminPage;
+export default ArtistPage;

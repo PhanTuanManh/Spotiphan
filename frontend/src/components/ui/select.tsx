@@ -149,13 +149,10 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   placeholder = "Select options",
 }) => {
   const handleSelect = (value: string) => {
-    console.log("🟢 Before update: selectedValues =", selectedValues);
-
     const newValues = selectedValues.includes(value)
       ? selectedValues.filter((v) => v !== value) // Nếu đã chọn thì bỏ chọn
       : [...selectedValues, value]; // Nếu chưa chọn thì thêm vào
 
-    console.log("🔹 After update: newValues =", newValues);
     onChange(newValues);
   };
 

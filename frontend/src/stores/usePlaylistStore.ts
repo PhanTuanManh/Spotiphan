@@ -72,7 +72,6 @@ export const usePlaylistStore = create<PlaylistStore>((set) => ({
   createPlaylist: async (playlistData: IPlaylist) => {
     set({ isLoading: true, error: null });
     try {
-      console.log("🟢 Creating playlist with data:", playlistData);
       await axiosInstance.post("/playlists", playlistData);
       await usePlaylistStore.getState().fetchMyPlaylists();
       toast.success("Playlist created successfully");
@@ -117,7 +116,6 @@ export const usePlaylistStore = create<PlaylistStore>((set) => ({
   addSongToPlaylist: async (songId: string, playlistId: string) => {
     set({ isLoading: true, error: null });
     try {
-      console.log(`🟢 Adding song ${songId} to playlist ${playlistId}...`);
       await axiosInstance.post(`/playlists/${playlistId}/add-song`, { songId });
       await usePlaylistStore.getState().fetchMyPlaylists();
       toast.success("Song added to playlist successfully");

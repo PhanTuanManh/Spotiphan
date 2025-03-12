@@ -37,7 +37,6 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
       set({ albums: response.data.albums });
     } catch (error: any) {
       set({ error: error.message });
-      
     } finally {
       set({ isLoading: false });
     }
@@ -46,24 +45,16 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
   // Fetch all albums (Admin only)
   fetchAllAlbumsAdmin: async () => {
     set({ isLoading: true, error: null });
-  
+
     try {
-      console.log("🔹 Fetching albums as admin...");
-      console.log("🔹 Current Axios Headers:", axiosInstance.defaults.headers);
-  
       const response = await axiosInstance.get("/admin/albums");
       set({ albums: response.data.albums });
-  
-    
     } catch (error: any) {
       set({ error: error.message });
-     
-      console.error("❌ Error:", error.response || error);
     } finally {
       set({ isLoading: false });
     }
   },
-  
 
   // Fetch artist's own albums
   fetchMyAlbums: async () => {
@@ -73,7 +64,6 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
       set({ albums: response.data.albums });
     } catch (error: any) {
       set({ error: error.message });
-    
     } finally {
       set({ isLoading: false });
     }
@@ -87,7 +77,6 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
       set({ currentAlbum: response.data });
     } catch (error: any) {
       set({ error: error.message });
-   
     } finally {
       set({ isLoading: false });
     }
@@ -103,10 +92,8 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
       set((state) => ({
         albums: [...state.albums, response.data.album],
       }));
-      
     } catch (error: any) {
       set({ error: error.message });
-     
     } finally {
       set({ isLoading: false });
     }
@@ -116,16 +103,17 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
   updateAlbum: async (id: string, albumData: Partial<IAlbum>) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.put(`/artist/albums/${id}`, albumData);
+      const response = await axiosInstance.put(
+        `/artist/albums/${id}`,
+        albumData
+      );
       set((state) => ({
         albums: state.albums.map((album) =>
           album._id === id ? response.data.album : album
         ),
       }));
-   
     } catch (error: any) {
       set({ error: error.message });
-    
     } finally {
       set({ isLoading: false });
     }
@@ -139,10 +127,8 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
       set((state) => ({
         albums: state.albums.filter((album) => album._id !== id),
       }));
-    
     } catch (error: any) {
       set({ error: error.message });
-     
     } finally {
       set({ isLoading: false });
     }
@@ -158,10 +144,8 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
           album._id === id ? { ...album, status: "approved" } : album
         ),
       }));
-     
     } catch (error: any) {
       set({ error: error.message });
-   
     } finally {
       set({ isLoading: false });
     }
@@ -177,10 +161,8 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
           album._id === id ? { ...album, status: "rejected" } : album
         ),
       }));
-   
     } catch (error: any) {
       set({ error: error.message });
-   
     } finally {
       set({ isLoading: false });
     }
@@ -203,7 +185,7 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
       set({ isLoading: false });
     }
   },
-  
+
   unarchiveAlbum: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
@@ -221,12 +203,14 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
       set({ isLoading: false });
     }
   },
-  
+
   // Remove a song from an album (Artist only)
   removeSongFromAlbum: async (albumId: string, songId: string) => {
     set({ isLoading: true, error: null });
     try {
-      await axiosInstance.put(`/artist/albums/${albumId}/remove-song/${songId}`);
+      await axiosInstance.put(
+        `/artist/albums/${albumId}/remove-song/${songId}`
+      );
       set((state) => ({
         albums: state.albums.map((album) =>
           album._id === albumId
@@ -234,10 +218,8 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
             : album
         ),
       }));
-     
     } catch (error: any) {
       set({ error: error.message });
-     
     } finally {
       set({ isLoading: false });
     }

@@ -9,6 +9,7 @@ import HomePage from "./pages/home/HomePage";
 import { Toaster } from "react-hot-toast";
 import NotFoundPage from "./pages/404/NotFoundPage";
 import ChatPage from "./pages/chat/ChatPage";
+import ArtistPage from "./pages/artist/ArtistPage";
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         />
         <Route path="/auth-callback" element={<AuthCallbackPage />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/artists" element={<ArtistPage />} />
 
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />

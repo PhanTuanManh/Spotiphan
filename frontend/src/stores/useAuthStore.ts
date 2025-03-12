@@ -1,47 +1,25 @@
-// src/stores/useAuthStore.ts
-
-import { axiosInstance } from "@/lib/axios";
 import { create } from "zustand";
+import { axiosInstance } from "@/lib/axios";
 
-interface AuthStore {
-	isAdmin: boolean;
-	isLoading: boolean;
-	error: string | null;
-
-	checkAdminStatus: () => Promise<void>;
-	reset: () => void;
+interface AuthState {
+  role: "free" | "premium" | "artist" | "admin" | null;
+  isLoading: boolean;
+  checkUserRole: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
-	isAdmin: false,
-	isLoading: false,
-	error: null,
-
-	checkAdminStatus: async () => {
-		set({ isLoading: true, error: null });
-		try {
-			const response = await axiosInstance.get("/admin/check");
-			set({ isAdmin: response.data.admin });
-		} catch (error: any) {
-			set({ isAdmin: false, error: error.response.data.message });
-		} finally {
-			set({ isLoading: false });
-		}
-	},
-
-	checkArtistStatus: async () => {
-		set({ isLoading: true, error: null });
-		try {
-			const response = await axiosInstance.get("/artist/check");
-			set({ isAdmin: response.data.artist });
-		} catch (error: any) {
-			set({ isAdmin: false, error: error.response.data.message });
-		} finally {
-			set({ isLoading: false });
-		}
-	},
-
-	reset: () => {
-		set({ isAdmin: false, isLoading: false, error: null });
-	},
+export const useAuthStore = create<AuthState>((set) => ({
+  role: null,
+  isLoading: false,
+  checkUserRole: async () => {
+    try {
+      const response = await axiosInstance.get("/auth/me"); // API này phải trả về user.role
+      set({ role: response.data.user.role });
+      console.log("🔹 User Role:", response.data.user.role);
+    } catch (error) {
+      console.error("❌ Error checking user role:", error);
+      set({ role: null });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
 }));

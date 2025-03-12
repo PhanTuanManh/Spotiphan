@@ -9,27 +9,31 @@ import SignInRegisterModal from "./SignInOAuthButtons";
 import { buttonVariants } from "./ui/button";
 
 const Topbar = () => {
-  const { isAdmin } = useAuthStore();
-  console.log({ isAdmin });
-
+  const { role } = useAuthStore();
   return (
     <div
       className="flex items-center justify-between p-4 sticky top-0 bg-zinc-900/75 
       backdrop-blur-md z-10
-    "
-    >
+    ">
       <div className="flex gap-2 items-center">
         <img src="/spotify.png" className="size-8" alt="Spotify logo" />
         Spotiphan
       </div>
       <div className="flex items-center gap-4">
-        {isAdmin && (
+        {role === "admin" && (
           <Link
             to={"/admin"}
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
+            className={cn(buttonVariants({ variant: "outline" }))}>
             <LayoutDashboardIcon className="size-4  mr-2" />
             Admin Dashboard
+          </Link>
+        )}
+        {role === "artist" && (
+          <Link
+            to={"/artists"}
+            className={cn(buttonVariants({ variant: "outline" }))}>
+            <LayoutDashboardIcon className="size-4  mr-2" />
+            Artisit Dashboard
           </Link>
         )}
 
