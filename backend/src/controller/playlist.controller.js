@@ -243,19 +243,28 @@ export const updatePlaylist = async (req, res, next) => {
     if (!playlist) {
       return res.status(404).json({ message: "Playlist not found" });
     }
+
     const currentUser = await clerkClient.users.getUser(userId);
     const user = await User.findOne({ clerkId: currentUser.id });
 
-    if (playlist.userId.toString() !== userId && user.role !== "admin") {
+    if (
+      playlist.userId.toString() !== user._id.toString() &&
+      user.role !== "admin"
+    ) {
       return res.status(403).json({
         message: "You do not have permission to update this playlist",
       });
     }
 
+    // ✅ Xử lý cập nhật hình ảnh (chỉ cập nhật khi có ảnh mới)
+    let finalImageUrl = playlist.imageUrl; // Giữ nguyên ảnh cũ
     if (req.files && req.files.imageFile) {
       finalImageUrl = await uploadToCloudinary(req.files.imageFile);
+    } else if (!finalImageUrl && playlist.songs.length > 0) {
+      finalImageUrl = playlist.songs[0].imageUrl; // Nếu playlist chưa có ảnh, lấy từ bài hát đầu tiên
     }
-    // Nếu có category, chỉ admin mới được thay đổi
+
+    // ✅ Nếu có category, chỉ admin mới được thay đổi
     let validCategories = [];
     if (category.length > 0 && user.role === "admin") {
       validCategories = await Category.find({ _id: { $in: category } });
@@ -268,15 +277,10 @@ export const updatePlaylist = async (req, res, next) => {
         .json({ message: "Only admin can change categories" });
     }
 
-    // ✅ Nếu không có `imageUrl`, lấy ảnh từ bài hát đầu tiên trong playlist
-    let finalImageUrl = imageUrl || playlist.imageUrl;
-    if (!finalImageUrl && playlist.songs.length > 0) {
-      finalImageUrl = playlist.songs[0].imageUrl;
-    }
-
     // ✅ Cập nhật playlist
     playlist.name = name || playlist.name;
     playlist.isPublic = isPublic !== undefined ? isPublic : playlist.isPublic;
+    playlist.imageUrl = finalImageUrl;
 
     if (user.role === "admin") {
       playlist.category = validCategories.map((c) => c._id);
