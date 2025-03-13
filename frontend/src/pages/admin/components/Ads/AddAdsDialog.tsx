@@ -68,6 +68,7 @@ const AddAdsDialog = () => {
         startDate: "",
         endDate: "",
       });
+
       setImage(null);
       toast.success("Advertisement added successfully");
       getAllAdvertisements();

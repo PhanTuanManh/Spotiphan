@@ -19,6 +19,7 @@ import {
 import { useEffect, useState } from "react";
 import UpdateAdsDialog from "./UpdateAdsDialog";
 import ModalConfirm from "@/components/ui/modalConfirm";
+import toast from "react-hot-toast";
 
 // Custom Hook for Debouncing Input
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -62,8 +63,6 @@ const AdsTable = () => {
     getAllAdvertisements();
   }, [getAllAdvertisements]);
 
-  console.log("all:", allAdvertisements);
-
   const handleDeleteAd = async () => {
     if (selectedAd) {
       await deleteAdvertisement(selectedAd);
@@ -74,7 +73,7 @@ const AdsTable = () => {
 
   const handleToggleActive = async (adId: string) => {
     await toggleAdvertisementActive(adId);
-    getAllAdvertisements(); // ✅ Refresh list
+    toast.getAllAdvertisements(); // ✅ Refresh list
   };
 
   const filteredAds = Array.isArray(allAdvertisements)
@@ -87,7 +86,6 @@ const AdsTable = () => {
       })
     : [];
 
-  console.log("filteredAds:", filteredAds);
   return (
     <>
       {/* Modal Confirm Delete */}

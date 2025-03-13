@@ -17,7 +17,7 @@ const updateApiToken = (token: string | null) => {
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { getToken, userId } = useAuth();
   const [loading, setLoading] = useState(true);
-  const { checkUserRole, role } = useAuthStore();
+  const { checkUserRole, setUserId } = useAuthStore();
   const { initSocket, disconnectSocket } = useChatStore();
 
   const initAuth = useCallback(async () => {
@@ -31,9 +31,12 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       updateApiToken(token);
-      await checkUserRole(); // ✅ Kiểm tra role người dùng
 
       if (userId) {
+        setUserId(userId); // ✅ Cập nhật `id` trong Zustand
+        console.log("🔹 User ID set in Zustand:", userId);
+
+        await checkUserRole(); // ✅ Kiểm tra role người dùng
         console.log("🔹 Initializing Socket for User:", userId);
         initSocket(userId);
       }
@@ -43,7 +46,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, [getToken, userId, checkUserRole, initSocket]);
+  }, [getToken, userId, checkUserRole, initSocket, setUserId]);
 
   useEffect(() => {
     initAuth();
