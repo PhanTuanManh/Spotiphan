@@ -4,7 +4,6 @@ import StatsCard from "./StatsCard";
 
 const DashboardStats = ({ artistId }: { artistId: string }) => {
   const { artistStats } = useStatsStore();
-  console.log(artistStats);
   const statsData = artistStats[artistId]
     ? [
         {

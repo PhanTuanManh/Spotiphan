@@ -9,15 +9,16 @@ import Header from "./components/Header";
 import SinglesTabContent from "./components/Single/SinglesTabContent";
 
 const AdminPage = () => {
-  const { id, role, isLoading } = useAuthStore();
+  const { clerk_id, role, isLoading } = useAuthStore();
 
   const { fetchStatsForArtist } = useStatsStore();
 
   useEffect(() => {
-    if (id) {
-      fetchStatsForArtist(id);
+    if (clerk_id) {
+      fetchStatsForArtist(clerk_id);
+      console.log("i" + clerk_id);
     }
-  }, [fetchStatsForArtist, id]);
+  }, [fetchStatsForArtist, clerk_id]);
 
   if (role !== "artist" && !isLoading) return <div>Unauthorized</div>;
 
@@ -27,7 +28,7 @@ const AdminPage = () => {
    to-black text-zinc-100 p-8">
       <Header />
 
-      {id && <DashboardStats artistId={id} />}
+      {clerk_id && <DashboardStats artistId={clerk_id} />}
 
       <Tabs defaultValue="songs" className="space-y-6">
         <TabsList className="p-1 bg-zinc-800/50">

@@ -1,6 +1,6 @@
-import { create } from "zustand";
 import { axiosInstance } from "@/lib/axios";
 import { IArtistStats, IStats } from "@/types";
+import { create } from "zustand";
 
 interface StatsStore {
   stats: IStats;
@@ -43,16 +43,13 @@ export const useStatsStore = create<StatsStore>((set) => ({
 
   // Lấy thống kê của một Artist
   fetchStatsForArtist: async (artistId: string) => {
-    const normalizedId = artistId.startsWith("user_") ? artistId : artistId;
-    const url = `/stats/artist/${normalizedId}`;
-
-    console.log("📡 Fetching:", url); // ✅ Kiểm tra URL
+    const url = `/stats/artist/${artistId}`;
 
     set((state) => ({
       artistStats: {
         ...state.artistStats,
-        [normalizedId]: {
-          artistId: normalizedId,
+        [artistId]: {
+          artistId,
           artistName: "",
           totalSongs: 0,
           totalAlbums: 0,
@@ -64,32 +61,24 @@ export const useStatsStore = create<StatsStore>((set) => ({
     }));
 
     try {
-      const response = await axiosInstance.get(url, {
-        headers: { Accept: "application/json" }, // Đảm bảo nhận JSON
+      const { data } = await axiosInstance.get(url, {
+        headers: { Accept: "application/json" },
       });
-
-      console.log("🔹 API Response Data:", response.data); // ✅ Kiểm tra dữ liệu trả về
-
-      if (typeof response.data !== "object") {
-        throw new Error(
-          "Invalid API response, expected JSON but received something else."
-        );
-      }
+      if (!data || typeof data !== "object")
+        throw new Error("Invalid API response");
 
       set((state) => ({
         artistStats: {
           ...state.artistStats,
-          [normalizedId]: { ...response.data, loading: false, error: null },
+          [artistId]: { ...data, loading: false, error: null },
         },
       }));
     } catch (error: any) {
-      console.error("❌ Error fetching artist stats:", error.response || error);
-
       set((state) => ({
         artistStats: {
           ...state.artistStats,
-          [normalizedId]: {
-            artistId: normalizedId,
+          [artistId]: {
+            artistId,
             artistName: "",
             totalSongs: 0,
             totalAlbums: 0,

@@ -42,23 +42,27 @@ export const getStats = async (req, res, next) => {
  */
 export const getStatsForArtist = async (req, res, next) => {
   try {
-    const { artistId } = req.params;
+    const { artistId } = req.params; // Đây là Clerk ID (user_...)
 
-    // Kiểm tra xem artist có tồn tại không
-    const artist = await User.findById(artistId);
+    // 🔹 Tìm User trong MongoDB bằng `clerkId` thay vì `_id`
+    const artist = await User.findOne({ clerkId: artistId });
+
     if (!artist || artist.role !== "artist") {
       return res.status(404).json({ message: "Artist không tồn tại" });
     }
 
-    // Lấy thống kê bài hát, album, single của artist đó
+    // 🔹 Lấy `_id` của artist để dùng trong truy vấn tiếp theo
+    const mongoUserId = artist._id;
+
+    // 🔹 Lấy thống kê bài hát, album, single của artist đó
     const [totalSongs, totalAlbums, totalSingles] = await Promise.all([
-      Song.countDocuments({ artist: artistId }), // Tất cả bài hát
-      Album.countDocuments({ artist: artistId }), // Tất cả album
-      Song.countDocuments({ artist: artistId, isSingle: true }), // Chỉ tính bài hát là Single
+      Song.countDocuments({ artist: mongoUserId }),
+      Album.countDocuments({ artist: mongoUserId }),
+      Song.countDocuments({ artist: mongoUserId, isSingle: true }),
     ]);
 
     res.status(200).json({
-      artistId,
+      artistId: mongoUserId, // ✅ Trả về MongoDB `_id` thay vì Clerk ID
       artistName: artist.fullName,
       totalSongs,
       totalAlbums,
