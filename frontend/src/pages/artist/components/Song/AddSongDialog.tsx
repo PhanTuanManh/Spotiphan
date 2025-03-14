@@ -65,11 +65,16 @@ const AddSongDialog = () => {
     formData.append("artistId", user_id || "");
     formData.append("isSingle", String(isSingle));
     formData.append("duration", newSong.duration);
-    if (!isSingle && newSong.album) {
+    if (!isSingle && newSong.album && newSong.album !== "") {
       formData.append("albumId", newSong.album);
     }
     formData.append("audioFile", files.audio);
     formData.append("imageFile", files.image);
+
+    console.log("🚀 FormData being sent:");
+    for (let [key, value] of formData.entries()) {
+      console.log(`${key}:`, value);
+    }
 
     await createSong(formData);
 
@@ -229,9 +234,9 @@ const AddSongDialog = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Select Album</label>
               <Select
-                value={newSong.album}
-                onValueChange={(value) =>
-                  setNewSong({ ...newSong, album: value })
+                value={newSong.album || ""} // ✅ Đảm bảo giá trị không bị `undefined`
+                onValueChange={
+                  (value) => setNewSong({ ...newSong, album: value || "" }) // ✅ Nếu `value` không hợp lệ, đặt thành `""`
                 }>
                 <SelectTrigger className="bg-zinc-800 border-zinc-700">
                   <SelectValue placeholder="Select an album" />

@@ -52,10 +52,12 @@ export const getSongsByArtist = async (req, res, next) => {
     let filter = { artist: new mongoose.Types.ObjectId(artistId) };
 
     if (type === "album") {
-      filter.albumId = { $ne: null };
+      filter.albumId = { $ne: null }; // ✅ Lọc bài hát có album
     } else if (type === "single") {
-      filter.albumId = null;
+      filter.isSingle = true; // ✅ Lọc bài hát có `isSingle: true`
     }
+
+    console.log("🔎 MongoDB Filter:", JSON.stringify(filter, null, 2));
 
     // 🔹 Aggregation pipeline để sắp xếp `pending` trước
     const songs = await Song.aggregate([
@@ -96,8 +98,11 @@ export const getSongsByArtist = async (req, res, next) => {
       { $unwind: "$artist" },
     ]);
 
+    console.log("🎵 Songs Found:", songs.length);
+
     // 🔹 Kiểm tra nếu không có bài hát nào
     if (!songs.length) {
+      console.warn("⚠️ Không có bài hát nào.");
       return res
         .status(200)
         .json({ success: true, data: [], message: "Không có bài hát nào." });
@@ -130,11 +135,25 @@ export const createSong = async (req, res, next) => {
         .json({ message: "Chỉ artist mới có quyền thêm bài hát" });
     }
 
-    // Kiểm tra chỉ được chọn một trong hai: isSingle hoặc albumId
-    if ((!isSingle && !albumId) || (isSingle && albumId)) {
-      return res
-        .status(400)
-        .json({ message: "Bạn phải chọn một trong hai: Single/EP hoặc Album" });
+    // ✅ Chuyển đổi `isSingle` sang boolean đúng cách
+    const isSingleBool = isSingle === "true" || isSingle === true; // Chuyển đổi cả string và boolean
+    const albumIdValid =
+      albumId &&
+      typeof albumId === "string" &&
+      albumId !== "null" &&
+      albumId !== ""; // Đảm bảo `albumId` là string hợp lệ
+
+    // ✅ Chỉ một trong hai có thể được chọn, không được đồng thời có cả `isSingle: true` và `albumId`
+    if (isSingleBool && albumIdValid) {
+      return res.status(400).json({
+        message: "Bài hát không thể vừa là Single/EP vừa thuộc một Album.",
+      });
+    }
+
+    if (!isSingleBool && !albumIdValid) {
+      return res.status(400).json({
+        message: "Bạn phải chọn một trong hai: Single/EP hoặc Album.",
+      });
     }
 
     // Nếu có albumId, kiểm tra album có tồn tại không
@@ -178,12 +197,12 @@ export const createSong = async (req, res, next) => {
     // ✅ Tạo bài hát mới trong MongoDB
     const song = new Song({
       title,
-      artist: artist._id, // 🔹 Dùng `_id` từ MongoDB thay vì Clerk ID
+      artist: artist._id,
       audioUrl,
       imageUrl,
       duration,
       albumId: album ? album._id : null,
-      isSingle: !!isSingle,
+      isSingle: album ? false : true, // ✅ Nếu có album, `isSingle` phải `false`
     });
 
     await song.save();
@@ -201,28 +220,45 @@ export const createSong = async (req, res, next) => {
   }
 };
 
-export const archiveSong = async (req, res) => {
+export const toggleArchiveSong = async (req, res, next) => {
   try {
     const { songId } = req.params;
+    const clerkUserId = req.auth.userId;
 
+    // 🔹 Xác thực Artist
+    const artist = await User.findOne({ clerkId: clerkUserId });
+    if (!artist || artist.role !== "artist") {
+      return res.status(403).json({
+        message: "Chỉ artist mới có quyền thay đổi trạng thái bài hát",
+      });
+    }
+
+    // 🔹 Tìm bài hát
     const song = await Song.findById(songId);
     if (!song) {
-      return res.status(404).json({ message: "Song not found" });
+      return res.status(404).json({ message: "Bài hát không tồn tại" });
     }
 
-    // Kiểm tra quyền của artist
-    if (song.artist.toString() !== artistId) {
-      return res
-        .status(403)
-        .json({ message: "Bạn không có quyền archive bài hát này." });
+    // 🔹 Kiểm tra quyền sở hữu
+    if (song.artist.toString() !== artist._id.toString()) {
+      return res.status(403).json({
+        message: "Bạn không có quyền thay đổi trạng thái bài hát này",
+      });
     }
 
-    song.status = "archived";
+    // ✅ Toggle trạng thái giữa "archived" ↔ "active"
+    song.status = song.status === "archived" ? "pending" : "archived";
     await song.save();
 
-    res.status(200).json({ message: "Song archived successfully" });
+    res.status(200).json({
+      message: `Bài hát đã chuyển sang trạng thái ${song.status}`,
+      song,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error archiving song" });
+    console.error("❌ Lỗi khi thay đổi trạng thái bài hát:", error);
+    res
+      .status(500)
+      .json({ message: "Lỗi server khi thay đổi trạng thái bài hát." });
   }
 };
 
@@ -369,5 +405,40 @@ export const getSinglesByArtist = async (req, res) => {
   } catch (error) {
     console.error("❌ Error retrieving artist singles/EPs:", error);
     res.status(500).json({ message: "Error retrieving artist singles/EPs" });
+  }
+};
+
+export const deleteSong = async (req, res, next) => {
+  try {
+    const { songId } = req.params;
+    const clerkUserId = req.auth.userId;
+
+    // 🔹 Xác thực Artist
+    const artist = await User.findOne({ clerkId: clerkUserId });
+    if (!artist || artist.role !== "artist") {
+      return res
+        .status(403)
+        .json({ message: "Chỉ artist mới có quyền xóa bài hát" });
+    }
+
+    // 🔹 Tìm bài hát
+    const song = await Song.findById(songId);
+    if (!song) {
+      return res.status(404).json({ message: "Bài hát không tồn tại" });
+    }
+
+    // 🔹 Kiểm tra quyền sở hữu
+    if (song.artist.toString() !== artist._id.toString()) {
+      return res
+        .status(403)
+        .json({ message: "Bạn không có quyền xóa bài hát này" });
+    }
+
+    // ✅ Xóa bài hát
+    await song.deleteOne();
+    res.status(200).json({ message: "Bài hát đã được xóa" });
+  } catch (error) {
+    console.error("❌ Lỗi khi xóa bài hát:", error);
+    res.status(500).json({ message: "Lỗi server khi xóa bài hát." });
   }
 };

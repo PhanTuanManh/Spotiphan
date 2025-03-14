@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { axiosInstance } from "@/lib/axios"; // Đảm bảo axiosInstance đã được cấu hình
 import { ISong } from "@/types"; // Đảm bảo kiểu dữ liệu từ types/index.ts
 import toast from "react-hot-toast";
+import { useAuthStore } from "./useAuthStore";
 
 interface SongStore {
   songs: ISong[];
@@ -35,6 +36,8 @@ interface SongStore {
   archiveSingle: (songId: string) => Promise<void>;
   unarchiveSingle: (songId: string) => Promise<void>;
   deleteSong: (songId: string) => Promise<void>;
+  deleteSongbyArtist: (songId: string) => Promise<void>;
+  toggleArchiveSong: (songId: string) => Promise<void>;
 }
 
 export const useSongStore = create<SongStore>((set) => ({
@@ -189,45 +192,17 @@ export const useSongStore = create<SongStore>((set) => ({
 
   // Create a new song
   createSong: async (songData: FormData) => {
+    const { user_id } = useAuthStore.getState();
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post("/artists/songs", songData, {
+      await axiosInstance.post("/artists/songs", songData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      set((state) => ({
-        songs: [...state.songs, response.data.song],
-      }));
+      await useSongStore.getState().fetchSongsByArtist(user_id);
       toast.success("Song created successfully");
     } catch (error: any) {
       set({ error: error.message });
       toast.error("Failed to create song");
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
-  updateSong: async (songId: string, songData: FormData) => {
-    set({ isLoading: true, error: null });
-
-    try {
-      const response = await axiosInstance.put(
-        `/artist/songs/${songId}`,
-        songData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
-
-      set((state) => ({
-        songs: state.songs.map((song) =>
-          song._id === songId ? { ...song, ...response.data.song } : song
-        ),
-      }));
-
-      toast.success("Song updated successfully");
-    } catch (error: any) {
-      set({ error: error.message });
-      toast.error("Failed to update song");
     } finally {
       set({ isLoading: false });
     }
@@ -400,6 +375,91 @@ export const useSongStore = create<SongStore>((set) => ({
     } catch (error: any) {
       set({ error: error.message });
       toast.error("Failed to remove song from playlist");
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  deleteSongbyArtist: async (songId) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      await axiosInstance.delete(`/artists/songs/${songId}`);
+      set((state) => ({
+        songsByArtist: Object.fromEntries(
+          Object.entries(state.songsByArtist).map(([artistId, songs]) => [
+            artistId,
+            songs.filter((song) => song._id !== songId),
+          ])
+        ),
+      }));
+      toast.success("🎵 Bài hát đã được xóa");
+    } catch (error: any) {
+      set({ error: error.message });
+      toast.error("❌ Không thể xóa bài hát");
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // 🔥 Toggle Lưu trữ / Bỏ lưu trữ bài hát
+  toggleArchiveSong: async (songId) => {
+    set((state) => ({
+      isLoading: true,
+      error: null,
+      // 🔹 Cập nhật ngay lập tức trước khi gửi request
+      songsByArtist: Object.fromEntries(
+        Object.entries(state.songsByArtist).map(([artistId, songs]) => [
+          artistId,
+          songs.map((song) =>
+            song._id === songId
+              ? {
+                  ...song,
+                  status: song.status === "archived" ? "pending" : "archived",
+                }
+              : song
+          ),
+        ])
+      ),
+    }));
+
+    try {
+      await axiosInstance.patch(`/artists/songs/${songId}/toggle-archive`);
+      toast.success("🎵 Trạng thái bài hát đã được cập nhật");
+    } catch (error: any) {
+      set({ error: error.message });
+      toast.error("❌ Không thể thay đổi trạng thái bài hát");
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // 🔥 Cập nhật bài hát
+  updateSong: async (songId, songData) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const response = await axiosInstance.put(
+        `/artists/songs/${songId}`,
+        songData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      const updatedSong = response.data.song;
+      set((state) => ({
+        songsByArtist: Object.fromEntries(
+          Object.entries(state.songsByArtist).map(([artistId, songs]) => [
+            artistId,
+            songs.map((song) => (song._id === songId ? updatedSong : song)),
+          ])
+        ),
+      }));
+
+      toast.success("🎵 Bài hát đã được cập nhật");
+    } catch (error: any) {
+      set({ error: error.message });
+      toast.error("❌ Không thể cập nhật bài hát");
     } finally {
       set({ isLoading: false });
     }

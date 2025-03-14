@@ -52,7 +52,7 @@ const removeDiacritics = (str: string) => {
 const AlbumsTable = () => {
   const {
     albums,
-    fetchAllAlbumsAdmin,
+    fetchMyAlbums,
     approveAlbum,
     rejectAlbum,
     unarchiveAlbum,
@@ -70,8 +70,8 @@ const AlbumsTable = () => {
   >(null);
 
   useEffect(() => {
-    fetchAllAlbumsAdmin();
-  }, [fetchAllAlbumsAdmin]);
+    fetchMyAlbums();
+  }, [fetchMyAlbums]);
 
   const handleApprove = async (albumId: string) => {
     try {
@@ -168,7 +168,7 @@ const AlbumsTable = () => {
         <Button
           variant="outline"
           className="ml-4"
-          onClick={fetchAllAlbumsAdmin}
+          onClick={fetchMyAlbums}
           disabled={isLoading}>
           <RefreshCcw
             className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}

@@ -6,7 +6,6 @@ import { useEffect } from "react";
 import AlbumsTabContent from "./components/Album/AlbumsTabContent";
 import DashboardStats from "./components/DashboardStats";
 import Header from "./components/Header";
-import SinglesTabContent from "./components/Single/SinglesTabContent";
 import SongsTabContent from "./components/Song/SongsTabContent";
 
 const AdminPage = () => {
@@ -39,12 +38,6 @@ const AdminPage = () => {
             Songs
           </TabsTrigger>
           <TabsTrigger
-            value="singles"
-            className="data-[state=active]:bg-zinc-700">
-            <Music className="mr-2 size-4" />
-            Singles
-          </TabsTrigger>
-          <TabsTrigger
             value="albums"
             className="data-[state=active]:bg-zinc-700">
             <Album className="mr-2 size-4" />
@@ -54,9 +47,6 @@ const AdminPage = () => {
 
         <TabsContent value="songs">
           <SongsTabContent />
-        </TabsContent>
-        <TabsContent value="singles">
-          <SinglesTabContent />
         </TabsContent>
         <TabsContent value="albums">
           <AlbumsTabContent />

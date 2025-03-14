@@ -47,10 +47,8 @@ const SongsTable = () => {
     isLoading,
     error,
     fetchSongsByArtist,
-    deleteSong,
-    updateSong,
-    archiveSingle,
-    unarchiveSingle,
+    deleteSongbyArtist,
+    toggleArchiveSong,
     page,
     hasMore,
   } = useSongStore();
@@ -107,8 +105,9 @@ const SongsTable = () => {
         )
       )
       ?.filter((song: ISong) => {
-        if (selectedType === "album") return song.albumId !== null;
-        if (selectedType === "single") return song.albumId === null;
+        if (selectedType === "album")
+          return song.albumId && song.albumId.length > 0;
+        if (selectedType === "single") return song.isSingle === true; // ✅ Sửa điều kiện lọc `isSingle: true`
         return true; // Nếu là "all", không lọc
       }) || [];
 
@@ -121,7 +120,7 @@ const SongsTable = () => {
           title="Delete Song"
           message="Are you sure you want to delete this song? This action cannot be undone."
           onConfirm={() => {
-            deleteSong(selectedSongDelete);
+            deleteSongbyArtist(selectedSongDelete);
             setSelectedSongDelete(null);
           }}
           onCancel={() => setSelectedSongDelete(null)}
@@ -132,7 +131,7 @@ const SongsTable = () => {
           title="Archive Song"
           message="Are you sure you want to archive this song? This action cannot be undone."
           onConfirm={() => {
-            archiveSingle(selectedSongArchive);
+            toggleArchiveSong(selectedSongArchive);
             setSelectedSongArchive(null);
           }}
           onCancel={() => setSelectedSongArchive(null)}
@@ -173,90 +172,86 @@ const SongsTable = () => {
 
       {/* Songs Table */}
       <Table>
-        {isLoading ? (
-          <div></div>
-        ) : (
-          <>
-            <TableHeader>
-              <TableRow className="hover:bg-zinc-800/50">
-                <TableHead className="w-[50px]"></TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Linked</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+        <>
+          <TableHeader>
+            <TableRow className="hover:bg-zinc-800/50">
+              <TableHead className="w-[50px]"></TableHead>
+              <TableHead>Title</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Linked</TableHead>
+              <TableHead>Duration</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
 
-            <TableBody>
-              {filteredSongs.map((song: ISong) => (
-                <TableRow key={song._id} className="hover:bg-zinc-800/50">
-                  <TableCell>
-                    <img
-                      src={song.imageUrl}
-                      alt={song.title}
-                      className="size-10 rounded object-cover"
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{song.title}</TableCell>
-                  <TableCell>
-                    {song.isSingle
-                      ? "Single/Eps"
-                      : song.albumId?.title || "Unknown Album"}
-                  </TableCell>
-                  <TableCell>{song.likes.length}</TableCell>
-                  <TableCell>{`${Math.floor(song.duration / 60)} min ${
-                    song.duration % 60
-                  } s`}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        song.status === "pending"
-                          ? "bg-yellow-500 text-black"
-                          : song.status === "approved"
-                          ? "bg-green-500 text-white"
-                          : song.status === "rejected"
-                          ? "bg-red-500 text-white"
-                          : "bg-gray-500 text-white"
-                      }`}>
-                      {song.status}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-2 justify-end">
-                      <UpdateSongDialog song={song} />
-                      {song.status !== "archived" ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
-                          onClick={() => setSelectedSongArchive(song._id)}>
-                          <Archive className="size-4" />
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-gray-400 hover:text-gray-300 hover:bg-gray-400/10"
-                          onClick={() => unarchiveSingle(song._id)}>
-                          <PackageOpen className="size-4" />
-                        </Button>
-                      )}
+          <TableBody>
+            {filteredSongs.map((song: ISong) => (
+              <TableRow key={song._id} className="hover:bg-zinc-800/50">
+                <TableCell>
+                  <img
+                    src={song.imageUrl}
+                    alt={song.title}
+                    className="size-10 rounded object-cover"
+                  />
+                </TableCell>
+                <TableCell className="font-medium">{song.title}</TableCell>
+                <TableCell>
+                  {song.isSingle
+                    ? "Single/Eps"
+                    : song.albumId?.title || "Unknown Album"}
+                </TableCell>
+                <TableCell>{song.likes.length}</TableCell>
+                <TableCell>{`${Math.floor(song.duration / 60)} min ${
+                  song.duration % 60
+                } s`}</TableCell>
+                <TableCell>
+                  <span
+                    className={`px-2 py-1 text-xs rounded-full ${
+                      song.status === "pending"
+                        ? "bg-yellow-500 text-black"
+                        : song.status === "approved"
+                        ? "bg-green-500 text-white"
+                        : song.status === "rejected"
+                        ? "bg-red-500 text-white"
+                        : "bg-gray-500 text-white"
+                    }`}>
+                    {song.status}
+                  </span>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex gap-2 justify-end">
+                    {song.status !== "archived" ? (
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                        onClick={() => setSelectedSongDelete(song._id)}>
-                        <Trash2 className="size-4" />
+                        onClick={() => toggleArchiveSong(song._id)}
+                        className="text-gray-400 hover:text-gray-300 hover:bg-gray-400/10">
+                        <Archive className="h-4 w-4" />
                       </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </>
-        )}
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleArchiveSong(song._id)}
+                        className="text-gray-400 hover:text-gray-300 hover:bg-gray-400/10">
+                        <PackageOpen className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <UpdateSongDialog song={song} />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                      onClick={() => setSelectedSongDelete(song._id)}>
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </>
       </Table>
 
       {/* Load More */}
