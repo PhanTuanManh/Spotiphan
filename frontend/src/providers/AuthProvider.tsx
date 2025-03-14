@@ -33,11 +33,8 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       updateApiToken(token);
 
       if (userId) {
-        setUserId(userId); // ✅ Cập nhật `id` trong Zustand
         setClerkId(userId);
-        console.log("✅ User ID:", userId);
-        await checkUserRole(); // ✅ Kiểm tra role người dùng
-        console.log("✅ Role:", useAuthStore.getState());
+        await checkUserRole();
         initSocket(userId);
       }
     } catch (error: any) {
@@ -46,7 +43,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, [getToken, userId, checkUserRole, initSocket, setUserId]);
+  }, [getToken, userId, checkUserRole, initSocket, setUserId, setClerkId]);
 
   useEffect(() => {
     initAuth();

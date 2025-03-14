@@ -1,5 +1,3 @@
-// src/lib/cloudinary.js
-
 import { v2 as cloudinary } from "cloudinary";
 import dotenv from "dotenv";
 dotenv.config();
@@ -10,15 +8,22 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export const uploadToCloudinary = async (file, resourceType = "image") => {
-    try {
-        const result = await cloudinary.uploader.upload(file.tempFilePath, {
-            resource_type: resourceType, // "image" cho ảnh, "video" cho audio
-        });
+export const uploadToCloudinary = async (file, resourceType = "auto") => {
+  try {
+    // 🔹 Kiểm tra nếu file có `tempFilePath` → dùng nó
+    const filePath = file.tempFilePath || file.path || null;
 
-        return result.secure_url; // Trả về URL file sau khi upload
-    } catch (error) {
-        console.error("❌ Lỗi khi upload file lên Cloudinary:", error);
-        throw new Error("Upload file thất bại.");
+    if (!filePath) {
+      throw new Error("Không tìm thấy đường dẫn file để upload.");
     }
+
+    const result = await cloudinary.uploader.upload(filePath, {
+      resource_type: resourceType, // "auto" để Cloudinary tự nhận diện loại file
+    });
+
+    return result.secure_url;
+  } catch (error) {
+    console.error("❌ Lỗi khi upload file lên Cloudinary:", error.message);
+    throw new Error("Upload file thất bại.");
+  }
 };

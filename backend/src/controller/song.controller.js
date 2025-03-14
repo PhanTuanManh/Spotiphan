@@ -1,8 +1,11 @@
+import fs from "fs/promises";
+import { parseFile } from "music-metadata";
+import path from "path";
+import { uploadToCloudinary } from "../lib/cloudinary.js";
+import { Album } from "../models/album.model.js";
 import { Song } from "../models/song.model.js";
-import { UserListeningHistory } from "../models/userListeningHistory.model.js";
-import mongoose from "mongoose";
+import { User } from "../models/user.model.js";
 
-// Lấy tất cả bài hát đã được duyệt có phân trang
 export const getAllSongs = async (req, res, next) => {
   const { limit, page } = req.query;
   const skip = (page - 1) * limit;
@@ -35,6 +38,31 @@ export const getAllSongs = async (req, res, next) => {
   }
 };
 
+// Hãy tìm qua clerkID
+export const getSongsByArtist = async (req, res, next) => {
+  const { artistId } = req.params;
+  const { limit, page } = req.query;
+  const skip = (page - 1) * limit;
+
+  try {
+    const songs = await Song.find({
+      artist: artistId, // 🔹 Lọc bài hát theo Artist
+    })
+      .populate("albumId")
+      .populate("artist", "fullName imageUrl") // Lấy thông tin Artist
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    res.status(200).json({
+      success: true,
+      data: songs,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const createSong = async (req, res, next) => {
   try {
     // Kiểm tra xem có đủ file không
@@ -45,10 +73,10 @@ export const createSong = async (req, res, next) => {
     }
 
     const { title, albumId, isSingle } = req.body;
-    const artistId = req.auth.userId;
+    const clerkUserId = req.auth.userId; // Clerk ID từ Clerk
 
-    // Kiểm tra user có phải artist không
-    const artist = await User.findById(artistId);
+    // 🔹 Tìm user trong MongoDB dựa trên Clerk ID
+    const artist = await User.findOne({ clerkId: clerkUserId });
     if (!artist || artist.role !== "artist") {
       return res
         .status(403)
@@ -71,7 +99,7 @@ export const createSong = async (req, res, next) => {
       }
 
       // Kiểm tra quyền sở hữu album
-      if (album.artist.toString() !== artistId) {
+      if (album.artist.toString() !== artist._id.toString()) {
         return res
           .status(403)
           .json({ message: "Bạn không có quyền thêm bài hát vào album này" });
@@ -86,36 +114,27 @@ export const createSong = async (req, res, next) => {
       }
     }
 
-    // Upload file ảnh lên Cloudinary
+    // ✅ Upload file ảnh lên Cloudinary
     const imageFile = req.files.imageFile;
-    const imageUrl = await uploadToCloudinary(imageFile);
+    const imageUrl = await uploadToCloudinary(imageFile, "image");
 
-    // ✅ Lưu file audio vào `public/uploads/` tạm thời trước khi upload lên Cloudinary
+    // ✅ Lấy file audio
     const audioFile = req.files.audioFile;
-    const tempFilePath = path.join(
-      process.cwd(),
-      "public/uploads",
-      audioFile.name
-    );
-    await audioFile.mv(tempFilePath); // Di chuyển file vào thư mục tạm
 
     // ✅ Tính `duration` từ file audio
-    const metadata = await parseFile(tempFilePath);
-    const duration = Math.round(metadata.format.duration); // Đơn vị: giây
+    const metadata = await parseFile(audioFile.tempFilePath);
+    const duration = Math.round(metadata.format.duration) || 0; // Đơn vị: giây
 
     // ✅ Upload file audio lên Cloudinary
-    const audioUrl = await uploadToCloudinary(audioFile, "audio"); // Tải lên Cloudinary
-
-    // Xóa file tạm sau khi upload
-    await fs.unlink(tempFilePath);
+    const audioUrl = await uploadToCloudinary(audioFile, "auto");
 
     // ✅ Tạo bài hát mới trong MongoDB
     const song = new Song({
       title,
-      artist: artist._id,
+      artist: artist._id, // 🔹 Dùng `_id` từ MongoDB thay vì Clerk ID
       audioUrl,
       imageUrl,
-      duration, // 🕒 Tự động tính duration
+      duration,
       albumId: album ? album._id : null,
       isSingle: !!isSingle,
     });
@@ -131,7 +150,7 @@ export const createSong = async (req, res, next) => {
     res.status(201).json({ message: "Bài hát đã được tạo thành công", song });
   } catch (error) {
     console.error("❌ Lỗi khi tạo bài hát:", error);
-    next(error);
+    res.status(500).json({ message: "Lỗi server khi tạo bài hát." });
   }
 };
 
@@ -226,5 +245,52 @@ export const updateSong = async (req, res, next) => {
   } catch (error) {
     console.error("❌ Lỗi khi cập nhật bài hát:", error);
     next(error);
+  }
+};
+
+export const getSinglesByArtist = async (req, res) => {
+  try {
+    let { page = 1, limit = 10 } = req.query;
+    const { artistId } = req.params; // ✅ Lấy ID artist từ request params
+
+    // Chuyển đổi kiểu dữ liệu
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    // Kiểm tra nếu không có artistId
+    if (!artistId) {
+      return res.status(400).json({ message: "Missing artistId parameter" });
+    }
+
+    // Tính số lượng bài hát bỏ qua (skip)
+    const skip = (page - 1) * limit;
+
+    // Lấy danh sách Single/EP của artist
+    const singles = await Song.find({ isSingle: true, artist: artistId })
+      .populate("artist")
+      .sort({
+        status: 1, // "pending" trước (pending < approved < rejected)
+        createdAt: -1, // Mới nhất trước
+      })
+      .skip(skip)
+      .limit(limit);
+
+    // Đếm tổng số bài hát Single/EP của artist
+    const totalSingles = await Song.countDocuments({
+      isSingle: true,
+      artist: artistId,
+    });
+    const totalPages = Math.ceil(totalSingles / limit);
+
+    res.status(200).json({
+      page,
+      totalPages,
+      totalSingles,
+      limit,
+      singles,
+    });
+  } catch (error) {
+    console.error("❌ Error retrieving artist singles/EPs:", error);
+    res.status(500).json({ message: "Error retrieving artist singles/EPs" });
   }
 };

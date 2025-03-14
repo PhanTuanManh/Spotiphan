@@ -60,7 +60,7 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
   fetchMyAlbums: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get("/artist/my-albums");
+      const response = await axiosInstance.get("/artists/my-albums");
       set({ albums: response.data.albums });
     } catch (error: any) {
       set({ error: error.message });

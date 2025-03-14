@@ -22,11 +22,9 @@ export const approveSingleOrEP = async (req, res) => {
     }
 
     if (!song.isSingle) {
-      return res
-        .status(400)
-        .json({
-          message: "This song is part of an album. Approve the album instead.",
-        });
+      return res.status(400).json({
+        message: "This song is part of an album. Approve the album instead.",
+      });
     }
 
     if (song.status === "approved") {
@@ -54,11 +52,9 @@ export const rejectSingleOrEP = async (req, res) => {
     }
 
     if (!song.isSingle) {
-      return res
-        .status(400)
-        .json({
-          message: "This song is part of an album. Reject the album instead.",
-        });
+      return res.status(400).json({
+        message: "This song is part of an album. Reject the album instead.",
+      });
     }
 
     if (song.status === "rejected") {
@@ -124,19 +120,15 @@ export const archiveSingleOrEP = async (req, res) => {
     }
 
     if (!song.isSingle) {
-      return res
-        .status(400)
-        .json({
-          message: "This song is part of an album. Archive the album instead.",
-        });
+      return res.status(400).json({
+        message: "This song is part of an album. Archive the album instead.",
+      });
     }
 
     if (song.artist.toString() !== artistId && req.user.role !== "admin") {
-      return res
-        .status(403)
-        .json({
-          message: "You do not have permission to archive this single/EP.",
-        });
+      return res.status(403).json({
+        message: "You do not have permission to archive this single/EP.",
+      });
     }
 
     song.status = "archived";
@@ -161,19 +153,15 @@ export const unarchiveSingleOrEP = async (req, res) => {
     }
 
     if (!song.isSingle) {
-      return res
-        .status(400)
-        .json({
-          message: "This song is part of an album. Archive the album instead.",
-        });
+      return res.status(400).json({
+        message: "This song is part of an album. Archive the album instead.",
+      });
     }
 
     if (song.artist.toString() !== artistId && req.user.role !== "admin") {
-      return res
-        .status(403)
-        .json({
-          message: "You do not have permission to archive this single/EP.",
-        });
+      return res.status(403).json({
+        message: "You do not have permission to archive this single/EP.",
+      });
     }
 
     song.status = "pending";
@@ -198,11 +186,9 @@ export const deleteSingleOrEP = async (req, res) => {
     }
 
     if (song.artist.toString() !== req.userId && req.user.role !== "admin") {
-      return res
-        .status(403)
-        .json({
-          message: "You do not have permission to delete this single/EP",
-        });
+      return res.status(403).json({
+        message: "You do not have permission to delete this single/EP",
+      });
     }
 
     // 🗑 Xóa bài hát khỏi playlist
@@ -458,13 +444,9 @@ export const toggleBlockUser = async (req, res, next) => {
     user.isBlocked = !user.isBlocked;
     await user.save();
 
-    res
-      .status(200)
-      .json({
-        message: `User ${
-          user.isBlocked ? "blocked" : "unblocked"
-        } successfully`,
-      });
+    res.status(200).json({
+      message: `User ${user.isBlocked ? "blocked" : "unblocked"} successfully`,
+    });
   } catch (error) {
     next(error);
   }

@@ -12,11 +12,19 @@ interface SongStore {
   hasMore: boolean;
   error: string | null;
   currentSong: ISong | null;
+  songsByArtist: Record<string, any[]>;
 
+  fetchSongsByArtist: (
+    artistId: string,
+    limit?: number,
+    page?: number
+  ) => Promise<void>;
+  createSong: (songData: FormData) => Promise<void>;
   fetchSongs: () => Promise<void>;
   fetchSongById: (id: string) => Promise<void>;
   likeSong: (songId: string) => Promise<void>;
   fetchAllSingles: () => Promise<void>;
+  fetchAllSinglesByArtist: (artistId: string) => Promise<void>;
   approveSingle: (songId: string) => Promise<void>;
   rejectSingle: (songId: string) => Promise<void>;
   dislikeSong: (songId: string) => Promise<void>;
@@ -34,6 +42,7 @@ export const useSongStore = create<SongStore>((set) => ({
   hasMore: true,
   error: null,
   currentSong: null,
+  songsByArtist: {},
 
   // Fetch all songs
   fetchSongs: async (page = 1, searchTerm = "") => {
@@ -78,6 +87,43 @@ export const useSongStore = create<SongStore>((set) => ({
     }
   },
 
+  fetchAllSinglesByArtist: async (artistId: string, page = 1) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const response = await axiosInstance.get(`/artists/singles/${artistId}`, {
+        params: { page, limit: 10 },
+      });
+
+      const singles = Array.isArray(response.data.singles)
+        ? response.data.singles
+        : [];
+
+      set((state) => ({
+        songsByArtist: {
+          ...state.songsByArtist,
+          [artistId]:
+            page === 1
+              ? singles // ✅ Nếu là trang đầu tiên, ghi đè danh sách
+              : [...(state.songsByArtist[artistId] || []), ...singles], // ✅ Nếu trang sau, nối dữ liệu vào danh sách cũ
+        },
+        page,
+        hasMore: singles.length === 10, // ✅ Kiểm tra nếu còn dữ liệu
+      }));
+
+      console.log(
+        `🎵 Lấy Single/EP của Artist ${artistId} - Trang ${page}:`,
+        singles
+      );
+    } catch (error: any) {
+      console.error("❌ Fetch Singles Error:", error);
+      set({ error: error.message, songsByArtist: {} });
+      toast.error("Failed to fetch singles");
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
   // Fetch a single song by ID
   fetchSongById: async (id: string) => {
     set({ isLoading: true, error: null });
@@ -87,6 +133,60 @@ export const useSongStore = create<SongStore>((set) => ({
     } catch (error: any) {
       set({ error: error.message });
       toast.error("Failed to fetch song details");
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // fetchSongByArtist
+  fetchSongsByArtist: async (artistId: string, page = 1, searchTerm) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const response = await axiosInstance.get(`/artists/songs/${artistId}`, {
+        params: { page, limit: 10, search: searchTerm }, // ✅ Đảm bảo gửi request đúng
+      });
+
+      const newSongs = response.data.data;
+      const hasMore = newSongs.length === 10; // ✅ Nếu đủ 10 bài, tiếp tục load trang sau
+
+      set((state) => ({
+        songsByArtist: {
+          ...state.songsByArtist,
+          [artistId]:
+            page === 1
+              ? newSongs // ✅ Nếu trang đầu tiên, ghi đè danh sách
+              : [...(state.songsByArtist[artistId] || []), ...newSongs], // ✅ Nếu trang tiếp theo, nối vào danh sách cũ
+        },
+        page,
+        hasMore,
+      }));
+
+      console.log(
+        `🎵 Trang ${page} - Số bài hát nhận được: ${newSongs.length}`
+      );
+    } catch (error: any) {
+      set({ error: error.message });
+      toast.error("❌ Lỗi khi tải danh sách bài hát");
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // Create a new song
+  createSong: async (songData: FormData) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.post("/artists/songs", songData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      set((state) => ({
+        songs: [...state.songs, response.data.song],
+      }));
+      toast.success("Song created successfully");
+    } catch (error: any) {
+      set({ error: error.message });
+      toast.error("Failed to create song");
     } finally {
       set({ isLoading: false });
     }
@@ -226,7 +326,7 @@ export const useSongStore = create<SongStore>((set) => ({
   addSongToPlaylist: async (songId: string, playlistId: string) => {
     set({ isLoading: true, error: null });
     try {
-      await axiosInstance.post(`/api/playlists/${playlistId}/add-song`, {
+      await axiosInstance.post(`/playlists/${playlistId}/add-song`, {
         songId,
       });
       set((state) => ({

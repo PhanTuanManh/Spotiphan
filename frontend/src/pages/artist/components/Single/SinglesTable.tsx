@@ -8,19 +8,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useSongStore } from "@/stores/useSongStore";
-import {
-  Archive,
-  CheckCircle,
-  PackageOpen,
-  RefreshCcw,
-  Trash2,
-  XCircle,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { useAuthStore } from "@/stores/useAuthStore";
 
-// Custom Hook for Debouncing
+import { useSongStore } from "@/stores/useSongStore";
+import { RefreshCcw } from "lucide-react";
+import { useEffect, useState } from "react";
+
 const useDebounce = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -40,22 +33,27 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 const removeDiacritics = (str: string) => {
   return str
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-\u036f]/g, "")
     .replace(/đ/g, "d")
     .replace(/Đ/g, "D");
 };
 
 const SinglesTable = () => {
+  const { user_id } = useAuthStore();
+  const artistId = user_id;
   const {
-    songs,
-    fetchAllSingles,
+    songsByArtist,
+    fetchAllSinglesByArtist,
     approveSingle,
     unarchiveSingle,
     rejectSingle,
     archiveSingle,
     deleteSong,
     isLoading,
+    page,
+    hasMore,
   } = useSongStore();
+
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [selectedSingleDelete, setSelectedSingleDelete] = useState<
@@ -66,77 +64,35 @@ const SinglesTable = () => {
   >(null);
 
   useEffect(() => {
-    fetchAllSingles();
-  }, [fetchAllSingles]);
+    if (artistId) {
+      fetchAllSinglesByArtist(artistId, 1);
+    }
+  }, [fetchAllSinglesByArtist, artistId, debouncedSearchTerm]);
 
-  const handleApprove = async (songId: string) => {
-    try {
-      await approveSingle(songId);
-    } catch {
-      toast.error("Failed to approve single");
+  const loadMoreSingles = () => {
+    if (hasMore) {
+      fetchAllSinglesByArtist(artistId, page + 1);
     }
   };
 
-  const handleReject = async (songId: string) => {
-    try {
-      await rejectSingle(songId);
-    } catch {
-      toast.error("Failed to reject single");
-    }
-  };
-
-  const handleArchive = async (songId: string) => {
-    try {
-      await archiveSingle(songId);
-    } catch {
-      toast.error("Failed to archive single");
-    }
-  };
-
-  const handleUnarchive = async (songId: string) => {
-    try {
-      await unarchiveSingle(songId);
-    } catch {
-      toast.error("Failed to archive single");
-    }
-  };
-
-  const handleDelete = async (songId: string) => {
-    try {
-      await deleteSong(songId);
-    } catch {
-      toast.error("Failed to delete single");
-    }
-  };
-
-  const filteredSongs = Array.isArray(songs)
-    ? songs.filter((song) => {
-        const normalizedSearchTerm = removeDiacritics(
-          debouncedSearchTerm.toLowerCase()
-        );
-        const normalizedTitle = removeDiacritics(song.title.toLowerCase());
-        const normalizedArtist = removeDiacritics(
-          (typeof song.artist === "object" && song.artist !== null
-            ? song.artist.fullName
-            : ""
-          ).toLowerCase()
-        );
-        return (
-          normalizedTitle.includes(normalizedSearchTerm) ||
-          normalizedArtist.includes(normalizedSearchTerm)
-        );
-      })
-    : [];
+  const filteredSongs =
+    songsByArtist[artistId]?.filter((song) => {
+      const normalizedSearchTerm = removeDiacritics(
+        debouncedSearchTerm.toLowerCase()
+      );
+      const normalizedTitle = removeDiacritics(song.title.toLowerCase());
+      return normalizedTitle.includes(normalizedSearchTerm);
+    }) || [];
 
   return (
     <>
       {/* Modal Confirm Archive */}
       {selectedSingleDelete && (
         <ModalConfirm
-          title="Delete Album"
-          message="Are you sure you want to delete this album? This action cannot be undone."
+          title="Delete Single"
+          message="Are you sure you want to delete this Single? This action cannot be undone."
           onConfirm={() => {
-            handleDelete(selectedSingleDelete);
+            deleteSong(selectedSingleDelete);
             setSelectedSingleDelete(null);
           }}
           onCancel={() => setSelectedSingleDelete(null)}
@@ -144,10 +100,10 @@ const SinglesTable = () => {
       )}
       {selectedSingleArchive && (
         <ModalConfirm
-          title="Archive Album"
-          message="Are you sure you want to archive this album? This action cannot be undone."
+          title="Archive Single"
+          message="Are you sure you want to archive this Single? This action cannot be undone."
           onConfirm={() => {
-            handleArchive(selectedSingleArchive);
+            archiveSingle(selectedSingleArchive);
             setSelectedSingleArchive(null);
           }}
           onCancel={() => setSelectedSingleArchive(null)}
@@ -166,7 +122,7 @@ const SinglesTable = () => {
         <Button
           variant="outline"
           className="ml-4"
-          onClick={fetchAllSingles}
+          onClick={() => fetchAllSinglesByArtist(artistId, 1)}
           disabled={isLoading}>
           <RefreshCcw
             className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
@@ -206,63 +162,23 @@ const SinglesTable = () => {
                       ? "bg-yellow-500 text-black"
                       : song.status === "approved"
                       ? "bg-green-500 text-white"
-                      : song.status === "rejected"
-                      ? "bg-red-500 text-white"
                       : "bg-gray-500 text-white"
                   }`}>
                   {song.status}
                 </span>
               </TableCell>
-              <TableCell className="text-right">
-                <div className="flex gap-2 justify-end">
-                  {song.status === "pending" && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleApprove(song._id)}
-                        className="text-green-400 hover:text-green-300 hover:bg-green-400/10">
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleReject(song._id)}
-                        className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
-                  {song.status !== "archived" ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedSingleArchive(song._id)}
-                      className="text-gray-400 hover:text-gray-300 hover:bg-gray-400/10">
-                      <Archive className="h-4 w-4" />
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleUnarchive(song._id)}
-                      className="text-gray-400 hover:text-gray-300 hover:bg-gray-400/10">
-                      <PackageOpen className="h-4 w-4" />
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedSingleDelete(song._id)}
-                    className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      {hasMore && (
+        <div className="flex justify-center mt-4">
+          <Button onClick={loadMoreSingles} disabled={isLoading}>
+            Load More
+          </Button>
+        </div>
+      )}
     </>
   );
 };

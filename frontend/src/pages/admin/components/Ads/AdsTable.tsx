@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import ModalConfirm from "@/components/ui/modalConfirm";
 import {
   Table,
   TableBody,
@@ -8,18 +9,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAdvertisementStore } from "@/stores/useAdvertisementStore";
-import {
-  RefreshCcw,
-  Trash2,
-  ToggleRight,
-  ToggleLeft,
-  XCircleIcon,
-  CheckCircleIcon,
-} from "lucide-react";
+import { RefreshCcw, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import UpdateAdsDialog from "./UpdateAdsDialog";
-import ModalConfirm from "@/components/ui/modalConfirm";
 import toast from "react-hot-toast";
+import UpdateAdsDialog from "./UpdateAdsDialog";
 
 // Custom Hook for Debouncing Input
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -73,7 +66,8 @@ const AdsTable = () => {
 
   const handleToggleActive = async (adId: string) => {
     await toggleAdvertisementActive(adId);
-    toast.getAllAdvertisements(); // ✅ Refresh list
+    toast.success("Updated ad successfully");
+    getAllAdvertisements(); // ✅ Refresh list
   };
 
   const filteredAds = Array.isArray(allAdvertisements)

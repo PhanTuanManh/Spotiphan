@@ -7,6 +7,7 @@ import AlbumsTabContent from "./components/Album/AlbumsTabContent";
 import DashboardStats from "./components/DashboardStats";
 import Header from "./components/Header";
 import SinglesTabContent from "./components/Single/SinglesTabContent";
+import SongsTabContent from "./components/Song/SongsTabContent";
 
 const AdminPage = () => {
   const { clerk_id, role, isLoading } = useAuthStore();
@@ -16,7 +17,6 @@ const AdminPage = () => {
   useEffect(() => {
     if (clerk_id) {
       fetchStatsForArtist(clerk_id);
-      console.log("i" + clerk_id);
     }
   }, [fetchStatsForArtist, clerk_id]);
 
@@ -53,7 +53,7 @@ const AdminPage = () => {
         </TabsList>
 
         <TabsContent value="songs">
-          <SinglesTabContent />
+          <SongsTabContent fetchSongs={true} />
         </TabsContent>
         <TabsContent value="singles">
           <SinglesTabContent />
