@@ -199,7 +199,9 @@ const SongsTable = () => {
                 <TableCell>
                   {song.isSingle
                     ? "Single/Eps"
-                    : song.albumId?.title || "Unknown Album"}
+                    : song.albumId?.length > 0
+                    ? song.albumId[0].title
+                    : "Unknown Album"}
                 </TableCell>
                 <TableCell>{song.likes.length}</TableCell>
                 <TableCell>{`${Math.floor(song.duration / 60)} min ${

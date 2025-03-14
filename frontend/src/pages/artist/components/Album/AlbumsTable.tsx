@@ -73,22 +73,6 @@ const AlbumsTable = () => {
     fetchMyAlbums();
   }, [fetchMyAlbums]);
 
-  const handleApprove = async (albumId: string) => {
-    try {
-      await approveAlbum(albumId);
-    } catch {
-      toast.error("Failed to approve album");
-    }
-  };
-
-  const handleReject = async (albumId: string) => {
-    try {
-      await rejectAlbum(albumId);
-    } catch {
-      toast.error("Failed to reject album");
-    }
-  };
-
   const handleDelete = async (albumId: string) => {
     try {
       await deleteAlbum(albumId);
@@ -130,7 +114,7 @@ const AlbumsTable = () => {
         );
       })
     : [];
-
+  console.log(filteredAlbums);
   return (
     <>
       {/* Modal Confirm Delete */}
@@ -233,25 +217,6 @@ const AlbumsTable = () => {
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex gap-2 justify-end">
-                  {album.status === "pending" && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleApprove(album._id)}
-                        className="text-green-400 hover:text-green-300 hover:bg-green-400/10">
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleReject(album._id)}
-                        className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
-
                   {album.status !== "archived" ? (
                     <Button
                       variant="ghost"

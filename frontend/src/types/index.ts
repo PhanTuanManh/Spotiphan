@@ -107,7 +107,7 @@ export interface ISong extends BaseModel {
   imageUrl: string;
   audioUrl: string;
   duration: number;
-  albumId?: string;
+  albumId?: IAlbum;
   listenCount: number;
   isFeatured: boolean;
   lastListenedAt?: string;

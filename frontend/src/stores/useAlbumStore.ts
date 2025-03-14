@@ -19,6 +19,7 @@ interface AlbumStore {
   approveAlbum: (id: string) => Promise<void>;
   rejectAlbum: (id: string) => Promise<void>;
   archiveAlbum: (id: string) => Promise<void>;
+  archiveAlbumByArtist: (id: string) => Promise<void>;
   unarchiveAlbum: (id: string) => Promise<void>;
   removeSongFromAlbum: (albumId: string, songId: string) => Promise<void>;
 }
@@ -177,6 +178,20 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
           album._id === id ? { ...album, status: "archived" } : album
         ),
       }));
+      toast.success("Album archived successfully");
+    } catch (error: any) {
+      set({ error: error.message });
+      toast.error("Failed to archive album");
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  archiveAlbumByArtist: async (id: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await axiosInstance.put(`/albums/${id}/archive`);
+      await useAlbumStore.getState().fetchMyAlbums();
       toast.success("Album archived successfully");
     } catch (error: any) {
       set({ error: error.message });
