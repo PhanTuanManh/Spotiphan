@@ -31,8 +31,6 @@ const AddSongDialog = () => {
   const [songDialogOpen, setSongDialogOpen] = useState(false);
   const [isSingle, setIsSingle] = useState(true);
 
-  console.log("user_id:" + user_id);
-
   const [newSong, setNewSong] = useState({
     title: "",
     album: "",

@@ -1,13 +1,11 @@
 // controllers/admin.controller.js
-import { uploadToCloudinary } from "../lib/cloudinary.js";
-import { Advertisement } from "../models/advertisement.model.js";
+import { clerkClient } from "@clerk/express";
+import dotenv from "dotenv";
 import { Album } from "../models/album.model.js";
 import { Playlist } from "../models/playList.model.js";
 import { Song } from "../models/song.model.js";
 import { SubscriptionPlan } from "../models/subscriptionPlan.model.js";
 import { User } from "../models/user.model.js";
-import { clerkClient } from "@clerk/express";
-import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -84,14 +82,35 @@ export const getAllSinglesOrEPs = async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Lấy danh sách Single/EP, sắp xếp theo trạng thái chờ duyệt trước
-    const singles = await Song.find({ isSingle: true })
-      .populate("artist")
-      .sort({
-        status: 1, // "pending" trước (theo bảng mã ASCII: pending < approved < rejected)
-        createdAt: -1, // Mới nhất trước
-      })
-      .skip(skip)
-      .limit(limit);
+    const singles = await Song.aggregate([
+      { $match: { isSingle: true } }, // Chỉ lấy Single/EP
+      {
+        $addFields: {
+          statusPriority: {
+            $switch: {
+              branches: [
+                { case: { $eq: ["$status", "pending"] }, then: 1 },
+                { case: { $eq: ["$status", "approved"] }, then: 2 },
+                { case: { $eq: ["$status", "rejected"] }, then: 3 },
+              ],
+              default: 4,
+            },
+          },
+        },
+      },
+      { $sort: { statusPriority: 1, createdAt: -1 } }, // Sắp xếp theo status trước, sau đó mới createdAt
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "users",
+          localField: "artist",
+          foreignField: "_id",
+          as: "artist",
+        },
+      },
+      { $unwind: "$artist" },
+    ]);
 
     // Đếm tổng số bài hát Single/EP
     const totalSingles = await Song.countDocuments({ isSingle: true });
@@ -105,7 +124,8 @@ export const getAllSinglesOrEPs = async (req, res) => {
       singles,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error retrieving pending singles/EPs" });
+    console.log(error);
+    res.status(500).json({ message: error.message });
   }
 };
 

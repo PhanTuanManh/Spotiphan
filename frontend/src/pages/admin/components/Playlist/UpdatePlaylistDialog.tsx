@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { axiosInstance } from "@/lib/axios";
 import { usePlaylistStore } from "@/stores/usePlaylistStore";
-import { PencilOff, Upload } from "lucide-react";
+import { Edit, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -138,7 +138,7 @@ const UpdatePlaylistDialog = ({ playlistId }: UpdatePlaylistProps) => {
           variant="ghost"
           size="sm"
           className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10">
-          <PencilOff className="h-4 w-4" />
+          <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>
 

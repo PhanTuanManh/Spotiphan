@@ -53,7 +53,7 @@ const AdminPage = () => {
         </TabsList>
 
         <TabsContent value="songs">
-          <SongsTabContent fetchSongs={true} />
+          <SongsTabContent />
         </TabsContent>
         <TabsContent value="singles">
           <SinglesTabContent />

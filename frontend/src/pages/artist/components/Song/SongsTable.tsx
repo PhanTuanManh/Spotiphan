@@ -8,12 +8,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useSongStore } from "@/stores/useSongStore";
-import { Calendar, Trash2, Edit, Archive, PackageOpen } from "lucide-react";
-import { useState, useEffect } from "react";
-import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { ISong } from "@/types";
+import { useSongStore } from "@/stores/useSongStore";
+import { ISong, Song } from "@/types";
+import { Archive, PackageOpen, RefreshCcw, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import UpdateSongDialog from "./UpdateSongDialog";
 
 const useDebounce = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -56,6 +56,9 @@ const SongsTable = () => {
   } = useSongStore();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedType, setSelectedType] = useState<"all" | "album" | "single">(
+    "all"
+  );
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [selectedSongDelete, setSelectedSongDelete] = useState<string | null>(
     null
@@ -65,23 +68,21 @@ const SongsTable = () => {
   );
 
   useEffect(() => {
-    if (
-      artistId &&
-      (!songsByArtist[artistId] || songsByArtist[artistId].length === 0)
-    ) {
-      fetchSongsByArtist(artistId, 1, searchTerm); // ✅ Fetch lần đầu tiên
-    }
-  }, [artistId, fetchSongsByArtist, searchTerm]);
+    if (!artistId) return;
+    console.log("Fetching with type:", selectedType);
+    fetchSongsByArtist(artistId, 1, debouncedSearchTerm, selectedType);
+  }, [artistId, fetchSongsByArtist, debouncedSearchTerm, selectedType]);
 
   const loadMoreSongs = () => {
     if (hasMore) {
-      fetchSongsByArtist(artistId, page + 1, searchTerm); // ✅ Load thêm dữ liệu khi có
+      fetchSongsByArtist(artistId, page + 1, searchTerm, selectedType); // ✅ Thêm `selectedType`
     }
   };
 
   if (
-    isLoading &&
-    (!songsByArtist[artistId] || songsByArtist[artistId].length === 0)
+    !artistId ||
+    (isLoading &&
+      (!songsByArtist[artistId] || songsByArtist[artistId].length === 0))
   ) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -99,12 +100,19 @@ const SongsTable = () => {
   }
 
   const filteredSongs =
-    songsByArtist[artistId]?.filter((song: ISong) =>
-      removeDiacritics(song.title.toLowerCase()).includes(
-        removeDiacritics(debouncedSearchTerm.toLowerCase())
+    songsByArtist[artistId]
+      ?.filter((song: ISong) =>
+        removeDiacritics(song.title.toLowerCase()).includes(
+          removeDiacritics(debouncedSearchTerm.toLowerCase())
+        )
       )
-    ) || [];
+      ?.filter((song: ISong) => {
+        if (selectedType === "album") return song.albumId !== null;
+        if (selectedType === "single") return song.albumId === null;
+        return true; // Nếu là "all", không lọc
+      }) || [];
 
+  console.log("filteredSongs:", filteredSongs);
   return (
     <>
       {/* Modal Confirm Archive & Delete */}
@@ -132,90 +140,123 @@ const SongsTable = () => {
       )}
 
       {/* Search */}
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex justify-between items-center">
         <input
           type="text"
-          placeholder="Tìm bài hát..."
+          placeholder="Search song or singles..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 p-2 border border-zinc-800 rounded bg-zinc-900 text-zinc-100"
+          className="w-full p-2 border border-zinc-800 rounded bg-zinc-900 text-zinc-100"
         />
+        <select
+          value={selectedType}
+          onChange={(e) =>
+            setSelectedType(e.target.value as "all" | "album" | "single")
+          }
+          className="p-2 border border-zinc-800 rounded bg-zinc-900 text-zinc-100">
+          <option value="all">All</option>
+          <option value="album">Album</option>
+          <option value="single">Singles</option>
+        </select>
+        <Button
+          variant="outline"
+          className="ml-4"
+          onClick={() =>
+            fetchSongsByArtist(artistId, 1, searchTerm, selectedType)
+          }
+          disabled={isLoading}>
+          <RefreshCcw
+            className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
+          />
+        </Button>
       </div>
 
       {/* Songs Table */}
       <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-zinc-800/50">
-            <TableHead className="w-[50px]">Ảnh</TableHead>
-            <TableHead>Tiêu đề</TableHead>
-            <TableHead>Loại</TableHead>
-            <TableHead>Lượt thích</TableHead>
-            <TableHead>Ngày phát hành</TableHead>
-            <TableHead className="text-right">Hành động</TableHead>
-          </TableRow>
-        </TableHeader>
+        {isLoading ? (
+          <div></div>
+        ) : (
+          <>
+            <TableHeader>
+              <TableRow className="hover:bg-zinc-800/50">
+                <TableHead className="w-[50px]"></TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Linked</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
 
-        <TableBody>
-          {filteredSongs.map((song: ISong) => (
-            <TableRow key={song._id} className="hover:bg-zinc-800/50">
-              <TableCell>
-                <img
-                  src={song.imageUrl}
-                  alt={song.title}
-                  className="size-10 rounded object-cover"
-                />
-              </TableCell>
-              <TableCell className="font-medium">{song.title}</TableCell>
-              <TableCell>
-                {song.isSingle
-                  ? "Single"
-                  : song.albumId?.title || "Unknown Album"}
-              </TableCell>
-              <TableCell>{song.likes.length}</TableCell>
-              <TableCell>
-                <span className="inline-flex items-center gap-1 text-zinc-400">
-                  <Calendar className="h-4 w-4" />
-                  {song.createdAt.split("T")[0]}
-                </span>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex gap-2 justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-400/10"
-                    onClick={() => updateSong(song._id)}>
-                    <Edit className="size-4" />
-                  </Button>
-                  {song.status !== "archived" ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
-                      onClick={() => setSelectedSongArchive(song._id)}>
-                      <Archive className="size-4" />
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-gray-400 hover:text-gray-300 hover:bg-gray-400/10"
-                      onClick={() => unarchiveSingle(song._id)}>
-                      <PackageOpen className="size-4" />
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                    onClick={() => setSelectedSongDelete(song._id)}>
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
+            <TableBody>
+              {filteredSongs.map((song: ISong) => (
+                <TableRow key={song._id} className="hover:bg-zinc-800/50">
+                  <TableCell>
+                    <img
+                      src={song.imageUrl}
+                      alt={song.title}
+                      className="size-10 rounded object-cover"
+                    />
+                  </TableCell>
+                  <TableCell className="font-medium">{song.title}</TableCell>
+                  <TableCell>
+                    {song.isSingle
+                      ? "Single/Eps"
+                      : song.albumId?.title || "Unknown Album"}
+                  </TableCell>
+                  <TableCell>{song.likes.length}</TableCell>
+                  <TableCell>{`${Math.floor(song.duration / 60)} min ${
+                    song.duration % 60
+                  } s`}</TableCell>
+                  <TableCell>
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        song.status === "pending"
+                          ? "bg-yellow-500 text-black"
+                          : song.status === "approved"
+                          ? "bg-green-500 text-white"
+                          : song.status === "rejected"
+                          ? "bg-red-500 text-white"
+                          : "bg-gray-500 text-white"
+                      }`}>
+                      {song.status}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-2 justify-end">
+                      <UpdateSongDialog song={song} />
+                      {song.status !== "archived" ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
+                          onClick={() => setSelectedSongArchive(song._id)}>
+                          <Archive className="size-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-gray-400 hover:text-gray-300 hover:bg-gray-400/10"
+                          onClick={() => unarchiveSingle(song._id)}>
+                          <PackageOpen className="size-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                        onClick={() => setSelectedSongDelete(song._id)}>
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </>
+        )}
       </Table>
 
       {/* Load More */}

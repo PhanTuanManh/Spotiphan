@@ -198,7 +198,9 @@ const SinglesTable = () => {
               </TableCell>
               <TableCell className="font-medium">{song.title}</TableCell>
               <TableCell>{song.artist.fullName}</TableCell>
-              <TableCell>{(song.duration / 60).toFixed(2)} min</TableCell>
+              <TableCell>{`${Math.floor(song.duration / 60)} min ${
+                song.duration % 60
+              } s`}</TableCell>
               <TableCell>
                 <span
                   className={`px-2 py-1 text-xs rounded-full ${
