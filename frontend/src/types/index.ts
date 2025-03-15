@@ -103,7 +103,7 @@ export interface IArtistInfo {
 
 export interface ISong extends BaseModel {
   title: string;
-  artist: string | IArtistInfo;
+  artist: string;
   imageUrl: string;
   audioUrl: string;
   duration: number;

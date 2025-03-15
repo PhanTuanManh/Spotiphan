@@ -37,6 +37,21 @@ export const getAllSongs = async (req, res, next) => {
   }
 };
 
+export const getLatestSingles = async (req, res, next) => {
+  try {
+    // Fetch 6 latest singles
+    const latestSingles = await Song.find({ album: null }) // Chỉ lấy những bài không thuộc album
+      .sort({ createdAt: -1 }) // Sắp xếp theo thời gian tạo mới nhất
+      .limit(6)
+      .populate("artist", "fullName imageUrl")
+      .select("_id title artist imageUrl audioUrl createdAt"); // Lọc các trường cần thiết
+
+    res.json(latestSingles);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getSongsByArtist = async (req, res, next) => {
   const { artistId } = req.params;
   const { limit = 10, page = 1, type } = req.query;

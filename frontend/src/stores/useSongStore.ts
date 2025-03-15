@@ -21,6 +21,7 @@ interface SongStore {
     searchTerm?: string,
     type?: "album" | "single" | "all"
   ) => Promise<void>;
+  fetchLatestSingles: () => Promise<void>;
   createSong: (songData: FormData) => Promise<void>;
   updateSong: (songId: string, songData: FormData) => Promise<void>;
   fetchSongs: () => Promise<void>;
@@ -460,6 +461,27 @@ export const useSongStore = create<SongStore>((set) => ({
     } catch (error: any) {
       set({ error: error.message });
       toast.error("❌ Không thể cập nhật bài hát");
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  fetchLatestSingles: async () => {
+    set({ isLoading: true, error: null });
+
+    try {
+      // Gọi API lấy danh sách 6 single mới nhất
+      const response = await axiosInstance.get("/songs/singles/lastest");
+
+      // Kiểm tra dữ liệu trả về có đúng dạng array không
+      const latestSingles = Array.isArray(response.data) ? response.data : [];
+
+      // Cập nhật store với danh sách mới nhất
+      set({ songs: latestSingles, hasMore: latestSingles.length > 0 });
+    } catch (error: any) {
+      console.error("❌ Fetch Latest Singles Error:", error);
+      set({ error: error.message, songs: [] });
+      toast.error("Failed to fetch latest singles");
     } finally {
       set({ isLoading: false });
     }

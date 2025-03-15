@@ -15,7 +15,7 @@ interface MusicStore {
   madeForYouSongs: ISong[];
   trendingSongs: ISong[];
   stats: IStats;
-  userQueue: IQueue[];  // Added for managing queue
+  userQueue: IQueue[]; // Added for managing queue
   userListeningHistory: IUserListeningHistory[]; // Added for user listening history
 
   fetchAlbums: () => Promise<void>;
@@ -24,11 +24,11 @@ interface MusicStore {
   fetchMadeForYouSongs: () => Promise<void>;
   fetchTrendingSongs: () => Promise<void>;
   fetchStats: () => Promise<void>;
+  fetchLatestSingles: () => Promise<void>;
   fetchSongs: () => Promise<void>;
-  fetchUserQueue: (userId: string) => Promise<void>;  // Added for queue fetching
-  fetchUserListeningHistory: (userId: string) => Promise<void>;  // Added for history
+  fetchUserQueue: (userId: string) => Promise<void>; // Added for queue fetching
+  fetchUserListeningHistory: (userId: string) => Promise<void>; // Added for history
   deleteSong: (id: string) => Promise<void>;
-  deleteAlbum: (id: string) => Promise<void>;
 }
 
 export const useMusicStore = create<MusicStore>((set) => ({
@@ -66,25 +66,6 @@ export const useMusicStore = create<MusicStore>((set) => ({
     }
   },
 
-  deleteAlbum: async (id) => {
-    set({ isLoading: true, error: null });
-    try {
-      await axiosInstance.delete(`/admin/albums/${id}`);
-      set((state) => ({
-        albums: state.albums.filter((album) => album._id !== id),
-        songs: state.songs.map((song) =>
-          song.albumId === id ? { ...song, album: null } : song
-        ),
-      }));
-      toast.success("Album deleted successfully");
-    } catch (error: any) {
-      toast.error("Failed to delete album: " + error.message);
-      set({ error: error.message });
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
   fetchSongs: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -114,7 +95,7 @@ export const useMusicStore = create<MusicStore>((set) => ({
     try {
       const response = await axiosInstance.get("/albums");
       const albumsData = response.data.albums;
-  
+
       if (!Array.isArray(albumsData)) {
         console.error("API returned non-array albums:", albumsData);
         set({ albums: [] }); // ✅ Đảm bảo albums luôn là mảng
@@ -143,10 +124,27 @@ export const useMusicStore = create<MusicStore>((set) => ({
   fetchFeaturedSongs: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get("/songs/featured");
-      set({ featuredSongs: response.data });
+      const response = await axiosInstance.get("/songs/singles/lastest");
+      const latestSingles = Array.isArray(response.data) ? response.data : [];
+      set({ featuredSongs: latestSingles });
     } catch (error: any) {
       set({ error: error.message });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  fetchLatestSingles: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      // Gọi API lấy danh sách 6 single mới nhất
+      const response = await axiosInstance.get("/songs/singles/lastest");
+      const latestSingles = Array.isArray(response.data) ? response.data : [];
+      set({ songs: latestSingles });
+    } catch (error: any) {
+      console.error("❌ Fetch Latest Singles Error:", error);
+      set({ error: error.message, songs: [] });
+      toast.error("Failed to fetch latest singles");
     } finally {
       set({ isLoading: false });
     }
@@ -200,4 +198,3 @@ export const useMusicStore = create<MusicStore>((set) => ({
     }
   },
 }));
-   
