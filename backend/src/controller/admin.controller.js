@@ -368,23 +368,9 @@ export const createUser = async (req, res, next) => {
 
 export const getAllUsers = async (req, res, next) => {
   try {
-    let { page = 1, limit = 10 } = req.query;
-    page = parseInt(page);
-    limit = parseInt(limit);
-
-    const totalUsers = await User.countDocuments();
-    const users = await User.find()
-      .populate("subscriptionPlan")
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      totalUsers,
-      currentPage: page,
-      totalPages: Math.ceil(totalUsers / limit),
-      users,
-    });
+    const currentUserId = req.auth.userId;
+    const users = await User.find({ clerkId: { $ne: currentUserId } });
+    res.status(200).json(users);
   } catch (error) {
     next(error);
   }

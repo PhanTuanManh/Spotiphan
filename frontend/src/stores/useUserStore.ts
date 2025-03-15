@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { axiosInstance } from "@/lib/axios";  // Đảm bảo axiosInstance đã được cấu hình
-import { IUser, ISubscriptionPlan } from "@/types";  // Thêm các kiểu dữ liệu thích hợp từ types/index.ts
+import { axiosInstance } from "@/lib/axios"; // Đảm bảo axiosInstance đã được cấu hình
+import { IUser, ISubscriptionPlan } from "@/types"; // Thêm các kiểu dữ liệu thích hợp từ types/index.ts
 import toast from "react-hot-toast";
 
 interface UserStore {
@@ -80,7 +80,9 @@ export const useUserStore = create<UserStore>((set) => ({
   updateSubscription: async (planId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.put("/api/users/me/subscription", { planId });
+      const response = await axiosInstance.put("/api/users/me/subscription", {
+        planId,
+      });
       set({ subscription: response.data });
       toast.success("Subscription updated successfully");
     } catch (error: any) {
@@ -94,7 +96,7 @@ export const useUserStore = create<UserStore>((set) => ({
   fetchUserPayments: async () => {
     set({ isLoading: true, error: null });
     try {
-     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const response = await axiosInstance.get("/api/users/me/payments");
       // Lưu trữ lịch sử thanh toán nếu cần
     } catch (error: any) {
@@ -109,7 +111,7 @@ export const useUserStore = create<UserStore>((set) => ({
     set({ isLoading: true, error: null });
     try {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const response = await axiosInstance.get(`/api/users/${userId}/messages`);
+      await axiosInstance.get(`/api/users/${userId}/messages`);
       // Lưu trữ tin nhắn nếu cần
     } catch (error: any) {
       set({ error: error.message });

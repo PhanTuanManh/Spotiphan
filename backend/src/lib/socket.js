@@ -37,19 +37,14 @@ export const initializeSocket = (server) => {
     socket.on("send_message", async (data) => {
       try {
         const { senderId, receiverId, content } = data;
-        const sender = await User.findById(senderId);
-        const receiver = await User.findById(receiverId);
 
-        if (!sender || !receiver) {
-          return socket.emit("message_error", "Người dùng không tồn tại");
-        }
+        const message = await Message.create({
+          senderId,
+          receiverId,
+          content,
+        });
 
-        if (receiver.isBlocked || sender.isBlocked) {
-          return socket.emit("message_error", "Bạn không thể nhắn tin với người này");
-        }
-
-        const message = await Message.create({ senderId, receiverId, content });
-
+        // send to receiver in realtime, if they're online
         const receiverSocketId = userSockets.get(receiverId);
         if (receiverSocketId) {
           io.to(receiverSocketId).emit("receive_message", message);
@@ -67,7 +62,10 @@ export const initializeSocket = (server) => {
         const user = await User.findById(userId).populate("followers");
 
         if (!user) {
-          return socket.emit("update_followers_error", "Người dùng không tồn tại");
+          return socket.emit(
+            "update_followers_error",
+            "Người dùng không tồn tại"
+          );
         }
 
         io.emit("followers_updated", {

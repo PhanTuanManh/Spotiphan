@@ -32,8 +32,7 @@ const MessageInput = () => {
       <div className="flex gap-2">
         <Button
           size="icon"
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-        >
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
           😀
         </Button>
 
@@ -54,8 +53,7 @@ const MessageInput = () => {
         <Button
           size={"icon"}
           onClick={handleSend}
-          disabled={!newMessage.trim()}
-        >
+          disabled={!newMessage.trim()}>
           <Send className="size-4" />
         </Button>
       </div>

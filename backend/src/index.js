@@ -24,6 +24,7 @@ import playlistRoutes from "./routes/playList.route.js";
 import userListeningHistoryRoutes from "./routes/userListeningHistory.route.js";
 import advertisementRoutes from "./routes/advertisement.route.js";
 import categoryRoutes from "./routes/category.route.js";
+import messageRoutes from "./routes/message.route.js";
 
 dotenv.config();
 
@@ -79,6 +80,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/albums", albumRoutes);
 app.use("/api/stats", statRoutes);
 app.use("/api/playlists", playlistRoutes);
+app.use("/api/messages", messageRoutes);
 app.use("/api/history", userListeningHistoryRoutes);
 app.use("/api/advertisements", advertisementRoutes);
 app.use("/uploads", express.static(path.join(process.cwd(), "public/uploads")));

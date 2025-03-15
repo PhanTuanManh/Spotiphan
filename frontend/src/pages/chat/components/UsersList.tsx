@@ -27,12 +27,11 @@ const UsersList = () => {
                       selectedUser?.clerkId === user.clerkId
                         ? "bg-zinc-800"
                         : "hover:bg-zinc-800/50"
-                    }`}
-                >
+                    }`}>
                   <div className="relative">
                     <Avatar className="size-8 md:size-12">
                       <AvatarImage src={user.imageUrl} />
-                      <AvatarFallback>{user.fullName[0]}</AvatarFallback>
+                      <AvatarFallback>{user.fullName}</AvatarFallback>
                     </Avatar>
                     {/* online indicator */}
                     <div
