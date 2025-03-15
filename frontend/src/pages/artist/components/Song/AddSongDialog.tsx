@@ -71,13 +71,7 @@ const AddSongDialog = () => {
     formData.append("audioFile", files.audio);
     formData.append("imageFile", files.image);
 
-    console.log("🚀 FormData being sent:");
-    for (let [key, value] of formData.entries()) {
-      console.log(`${key}:`, value);
-    }
-
     await createSong(formData);
-
     setNewSong({ title: "", album: "", duration: "0" });
     setFiles({ audio: null, image: null });
     setSongDialogOpen(false);

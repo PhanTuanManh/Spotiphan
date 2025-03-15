@@ -14,7 +14,7 @@ interface AlbumStore {
   fetchMyAlbums: () => Promise<void>;
   fetchAlbumById: (id: string) => Promise<void>;
   createAlbum: (albumData: FormData) => Promise<void>;
-  updateAlbum: (id: string, albumData: Partial<IAlbum>) => Promise<void>;
+  updateAlbum: (id: string, albumData: FormData) => Promise<void>;
   deleteAlbum: (id: string) => Promise<void>;
   approveAlbum: (id: string) => Promise<void>;
   rejectAlbum: (id: string) => Promise<void>;
@@ -87,12 +87,13 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
   createAlbum: async (albumData: FormData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post("/artist/albums", albumData, {
+      const response = await axiosInstance.post("/artists/albums", albumData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       set((state) => ({
         albums: [...state.albums, response.data.album],
       }));
+      toast.success("Album created successfully");
     } catch (error: any) {
       set({ error: error.message });
     } finally {
@@ -101,20 +102,26 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
   },
 
   // Update an existing album (Artist only)
-  updateAlbum: async (id: string, albumData: Partial<IAlbum>) => {
+  updateAlbum: async (id: string, albumData: FormData) => {
     set({ isLoading: true, error: null });
+
     try {
-      const response = await axiosInstance.put(
-        `/artist/albums/${id}`,
-        albumData
-      );
-      set((state) => ({
-        albums: state.albums.map((album) =>
-          album._id === id ? response.data.album : album
-        ),
-      }));
+      console.log("🚀 Gửi request cập nhật album:", id, albumData);
+
+      await axiosInstance.put(`/artists/albums/${id}`, albumData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      await useAlbumStore.getState().fetchMyAlbums();
+
+      toast.success("🎵 Album updated successfully");
     } catch (error: any) {
+      console.error(
+        "❌ Lỗi khi cập nhật album:",
+        error.response?.data || error
+      );
       set({ error: error.message });
+      toast.error("❌ Failed to update album");
     } finally {
       set({ isLoading: false });
     }
@@ -124,7 +131,7 @@ export const useAlbumStore = create<AlbumStore>((set) => ({
   deleteAlbum: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      await axiosInstance.delete(`/admin/albums/${id}`);
+      await axiosInstance.delete(`/albums/${id}`);
       set((state) => ({
         albums: state.albums.filter((album) => album._id !== id),
       }));

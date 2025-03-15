@@ -1,20 +1,10 @@
 // controllers/album.controller.js
 
+import { uploadToCloudinary } from "../lib/cloudinary.js";
 import { Album } from "../models/album.model.js";
 import { Category } from "../models/category.model.js";
 import { Song } from "../models/song.model.js";
 import mongoose from "mongoose";
-
-const uploadToCloudinary = async (file) => {
-  try {
-    const result = await cloudinary.uploader.upload(file.tempFilePath, {
-      resource_type: "auto",
-    });
-    return result.secure_url;
-  } catch (error) {
-    throw new Error("Error uploading to cloudinary");
-  }
-};
 
 export const getAllAlbums = async (req, res, next) => {
   try {
@@ -135,7 +125,7 @@ export const createAlbum = async (req, res, next) => {
   try {
     const { title, releaseYear, category } = req.body;
     const { imageFile } = req.files;
-    const artistId = req.userId;
+    const artistId = req.user?._id.toString();
 
     // Kiểm tra album có trùng tên không
     const existingAlbum = await Album.findOne({ title, artist: artistId });
@@ -145,14 +135,26 @@ export const createAlbum = async (req, res, next) => {
         .json({ message: "Album with this title already exists" });
     }
 
+    // ✅ Chuyển `category` từ string JSON về mảng ObjectId
+    const categoryArray =
+      typeof category === "string" ? JSON.parse(category) : category;
+
     // Kiểm tra category hợp lệ
-    if (!category || category.length === 0) {
+    if (!Array.isArray(categoryArray) || categoryArray.length === 0) {
       return res
         .status(400)
         .json({ message: "At least one category is required" });
     }
-    const validCategories = await Category.find({ _id: { $in: category } });
-    if (validCategories.length !== category.length) {
+
+    // ✅ Kiểm tra ObjectId hợp lệ trước khi truy vấn
+    if (!categoryArray.every((id) => mongoose.Types.ObjectId.isValid(id))) {
+      return res.status(400).json({ message: "Invalid category ID format" });
+    }
+
+    const validCategories = await Category.find({
+      _id: { $in: categoryArray },
+    });
+    if (validCategories.length !== categoryArray.length) {
       return res.status(400).json({ message: "Invalid category" });
     }
 
@@ -168,7 +170,7 @@ export const createAlbum = async (req, res, next) => {
       artist: artistId,
       imageUrl,
       releaseYear,
-      category,
+      category: categoryArray, // ✅ Lưu category dưới dạng mảng ObjectId
       status: "pending",
     });
 
@@ -176,7 +178,7 @@ export const createAlbum = async (req, res, next) => {
 
     // Cập nhật category chứa album này
     await Category.updateMany(
-      { _id: { $in: category } },
+      { _id: { $in: categoryArray } },
       { $push: { albums: album._id } }
     );
 
@@ -185,7 +187,7 @@ export const createAlbum = async (req, res, next) => {
       album,
     });
   } catch (error) {
-    console.error("Error in createAlbum", error);
+    console.error("❌ Error in createAlbum:", error);
     next(error);
   }
 };
@@ -193,12 +195,25 @@ export const createAlbum = async (req, res, next) => {
 export const updateAlbum = async (req, res, next) => {
   try {
     const { albumId } = req.params;
-    const { title, releaseYear, category } = req.body;
-    const artistId = req.userId;
+    let { title, releaseYear, category } = req.body;
+    const artistId = req.user?._id.toString();
 
     // Kiểm tra `albumId` hợp lệ
     if (!mongoose.Types.ObjectId.isValid(albumId)) {
       return res.status(400).json({ message: "Invalid album ID format" });
+    }
+
+    // Xử lý category: đảm bảo là một mảng hợp lệ
+    if (typeof category === "string") {
+      try {
+        category = JSON.parse(category);
+      } catch (e) {
+        return res.status(400).json({ message: "Invalid category format" });
+      }
+    }
+
+    if (!Array.isArray(category)) {
+      return res.status(400).json({ message: "Category must be an array" });
     }
 
     // Kiểm tra album có tồn tại không
@@ -209,9 +224,9 @@ export const updateAlbum = async (req, res, next) => {
 
     // Chỉ cho phép artist cập nhật album của họ
     if (album.artist.toString() !== artistId) {
-      return res
-        .status(403)
-        .json({ message: "You do not have permission to update this album" });
+      return res.status(403).json({
+        message: "You do not have permission to update this album",
+      });
     }
 
     // Nếu thay đổi title, kiểm tra trùng lặp
@@ -225,35 +240,42 @@ export const updateAlbum = async (req, res, next) => {
     }
 
     // Nếu có category, kiểm tra hợp lệ
-    let validCategories = [];
-    if (category) {
-      validCategories = await Category.find({ _id: { $in: category } });
+    if (category.length > 0) {
+      const validCategories = await Category.find({ _id: { $in: category } });
+
       if (validCategories.length !== category.length) {
         return res.status(400).json({ message: "Some categories are invalid" });
       }
-    }
 
-    // Cập nhật thông tin album
-    album.title = title || album.title;
-    album.releaseYear = releaseYear || album.releaseYear;
-    album.category = validCategories.map((c) => c._id) || album.category;
+      album.category = validCategories.map((c) => c._id);
 
-    await album.save();
-
-    // Cập nhật danh mục
-    if (category) {
+      // Cập nhật danh mục mới, xóa album khỏi danh mục cũ nếu có
       await Category.updateMany(
         { _id: { $nin: category } },
         { $pull: { albums: album._id } }
       );
       await Category.updateMany(
         { _id: { $in: category } },
-        { $push: { albums: album._id } }
+        { $addToSet: { albums: album._id } } // Sử dụng `$addToSet` để tránh trùng lặp
       );
     }
 
+    // ✅ Nếu có ảnh mới, upload lên Cloudinary
+    if (req.files && req.files.imageFile) {
+      const imageFile = req.files.imageFile;
+      const imageUrl = await uploadToCloudinary(imageFile, "image");
+      album.imageUrl = imageUrl; // Cập nhật ảnh mới
+    }
+
+    // Cập nhật thông tin album
+    album.title = title || album.title;
+    album.releaseYear = releaseYear || album.releaseYear;
+
+    await album.save();
+
     res.status(200).json({ message: "Album updated successfully", album });
   } catch (error) {
+    console.error("❌ Error updating album:", error);
     next(error);
   }
 };
@@ -261,7 +283,7 @@ export const updateAlbum = async (req, res, next) => {
 export const deleteAlbum = async (req, res, next) => {
   try {
     const { albumId } = req.params;
-    const artistId = req.userId;
+    const artistId = req.user?._id.toString();
 
     // Kiểm tra `albumId` hợp lệ
     if (!mongoose.Types.ObjectId.isValid(albumId)) {
@@ -277,6 +299,7 @@ export const deleteAlbum = async (req, res, next) => {
         .status(403)
         .json({ message: "You do not have permission to archive this album" });
     }
+
     // Xóa album khỏi danh mục
     await Category.updateMany(
       { albums: albumId },

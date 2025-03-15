@@ -58,7 +58,6 @@ router.delete("/singles/:songId", syncUserWithMongoDB, deleteSingleOrEP);
 // **Quản lý Album**
 router.put("/albums/:albumId/approve", syncUserWithMongoDB, approveAlbum);
 router.put("/albums/:albumId/reject", syncUserWithMongoDB, rejectAlbum);
-router.delete("/albums/:albumId", syncUserWithMongoDB, deleteAlbum);
 router.get("/albums", syncUserWithMongoDB, getAllAlbums);
 
 // **Quản lý User**
@@ -90,7 +89,6 @@ router.put(
 
 // **Quản lý category
 router.post("/categories/", createCategory);
-router.get("/categories/", getCategories);
 router.get("/categories/:categoryId", getCategoryById);
 router.put("/categories/:categoryId", updateCategory);
 router.delete("/categories/:categoryId", deleteCategory);

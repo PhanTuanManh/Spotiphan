@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import UpdateAlbumDialog from "./UpdateAlbumDialog";
 
 // Custom Hook for Debouncing
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -53,8 +54,6 @@ const AlbumsTable = () => {
   const {
     albums,
     fetchMyAlbums,
-    approveAlbum,
-    rejectAlbum,
     unarchiveAlbum,
     archiveAlbum,
     deleteAlbum,
@@ -234,6 +233,7 @@ const AlbumsTable = () => {
                       <PackageOpen className="h-4 w-4" />
                     </Button>
                   )}
+                  <UpdateAlbumDialog albumId={album._id} />
                   <Button
                     variant="ghost"
                     size="sm"

@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { axiosInstance } from "@/lib/axios";
+import { useCategoryStore } from "@/stores/useCategoryStore";
 import { usePlaylistStore } from "@/stores/usePlaylistStore";
 import { Edit, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -31,9 +32,7 @@ const UpdatePlaylistDialog = ({ playlistId }: UpdatePlaylistProps) => {
   const { fetchMyPlaylists } = usePlaylistStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [categories, setCategories] = useState<{ _id: string; name: string }[]>(
-    []
-  );
+  const { categories, getCategories } = useCategoryStore(); // ✅ Fetch danh mục
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [playlist, setPlaylist] = useState({
     name: "",
@@ -63,15 +62,7 @@ const UpdatePlaylistDialog = ({ playlistId }: UpdatePlaylistProps) => {
 
   // ✅ Fetch categories
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await axiosInstance.get("/admin/categories");
-        setCategories(res.data.categories || []);
-      } catch (error: any) {
-        toast.error("Failed to fetch categories: " + error.message);
-      }
-    };
-    fetchCategories();
+    getCategories(); // ✅ Lấy danh sách danh mục khi mở dialog
   }, []);
 
   useEffect(() => {

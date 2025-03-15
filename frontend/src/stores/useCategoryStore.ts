@@ -8,11 +8,16 @@ interface CategoryState {
   selectedCategory: ICategory | null;
   isLoading: boolean;
   error: string | null;
-  
+
   getCategories: () => Promise<void>;
   getCategoryById: (categoryId: string) => Promise<void>;
-  createCategory: (data: Omit<ICategory, "_id" | "createdAt" | "updatedAt">) => Promise<void>;
-  updateCategory: (categoryId: string, data: Partial<ICategory>) => Promise<void>;
+  createCategory: (
+    data: Omit<ICategory, "_id" | "createdAt" | "updatedAt">
+  ) => Promise<void>;
+  updateCategory: (
+    categoryId: string,
+    data: Partial<ICategory>
+  ) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
 }
 
@@ -26,7 +31,7 @@ export const useCategoryStore = create<CategoryState>((set) => ({
   getCategories: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(`/admin/categories/`);
+      const response = await axiosInstance.get(`/categories/`);
       set({ categories: response.data.categories });
     } catch (error: any) {
       set({ error: error.message || "Lỗi khi lấy danh mục" });
@@ -39,7 +44,9 @@ export const useCategoryStore = create<CategoryState>((set) => ({
   getCategoryById: async (categoryId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(`/admin/categories/${categoryId}`);
+      const response = await axiosInstance.get(
+        `/admin/categories/${categoryId}`
+      );
       set({ selectedCategory: response.data.category });
     } catch (error: any) {
       set({ error: error.message || "Lỗi khi lấy thông tin danh mục" });

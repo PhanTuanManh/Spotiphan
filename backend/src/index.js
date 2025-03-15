@@ -21,9 +21,9 @@ import statRoutes from "./routes/stat.route.js";
 import userRoutes from "./routes/user.route.js";
 import artistRoutes from "./routes/artist.route.js";
 import playlistRoutes from "./routes/playList.route.js";
-import userListeningHistoryRoutes from "./routes/userListeningHistory.route.js"
-import advertisementRoutes from "./routes/advertisement.route.js"
-import categoryRoutes from "./routes/category.route.js"
+import userListeningHistoryRoutes from "./routes/userListeningHistory.route.js";
+import advertisementRoutes from "./routes/advertisement.route.js";
+import categoryRoutes from "./routes/category.route.js";
 
 dotenv.config();
 
@@ -92,14 +92,12 @@ if (process.env.NODE_ENV === "production") {
 
 // error handler
 app.use((err, req, res, next) => {
-  res
-    .status(500)
-    .json({
-      message:
-        process.env.NODE_ENV === "production"
-          ? "Internal server error"
-          : err.message,
-    });
+  res.status(500).json({
+    message:
+      process.env.NODE_ENV === "production"
+        ? "Internal server error"
+        : err.message,
+  });
 });
 
 httpServer.listen(PORT, () => {

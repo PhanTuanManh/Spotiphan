@@ -4,6 +4,7 @@ import {
   createAlbum,
   getMyAlbums,
   removeSongFromAlbum,
+  updateAlbum,
 } from "../controller/album.controller.js";
 import {
   createSong,
@@ -35,6 +36,7 @@ router.put(
   removeSongFromAlbum
 );
 router.put("/albums/:albumId/archive", requireArtistOrAdmin, archiveAlbum);
+router.put("/albums/:albumId", requireArtist, updateAlbum);
 
 // **Quản lý bài hát (chỉ dành cho Artist)**
 router.get("/singles/:artistId", getSinglesByArtist);
