@@ -78,7 +78,7 @@ export const PlaybackControls = () => {
                   {currentSong.title}
                 </div>
                 <div className="text-sm text-zinc-400 truncate hover:underline cursor-pointer">
-                  {currentSong.artist}
+                  {currentSong.artist} {/* artist là string */}
                 </div>
               </div>
             </>

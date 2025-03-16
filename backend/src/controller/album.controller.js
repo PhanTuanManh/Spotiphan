@@ -19,7 +19,7 @@ export const getAllAlbums = async (req, res, next) => {
 
     // Retrieve album list, sorted by status with pending first
     const albums = await Album.find()
-      .populate("artist")
+      .populate("artist", "fullName imageUrl")
       .sort({
         status: 1, // "pending" first, then "approved", and finally "rejected"
         createdAt: -1, // Newest albums first

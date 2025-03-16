@@ -2,9 +2,22 @@
 
 import { Router } from "express";
 
-
-import { followUser, getMe, getMessages, getPaymentHistory, getUserProfile, unfollowUser, updateSubscriptionPlan, updateUserProfile } from "../controller/user.controller.js";
-import { protectRoute, syncUserWithMongoDB } from "../middleware/auth.middleware.js";
+import {
+  followUser,
+  getMe,
+  getMessages,
+  getPaymentHistory,
+  getUserProfile,
+  unfollowUser,
+  updateSubscriptionPlan,
+  updateUserProfile,
+  likeSong,
+  getUsersByIds,
+} from "../controller/user.controller.js";
+import {
+  protectRoute,
+  syncUserWithMongoDB,
+} from "../middleware/auth.middleware.js";
 import { getAllUsers } from "../controller/admin.controller.js";
 
 const router = Router();
@@ -13,9 +26,12 @@ router.use(protectRoute);
 
 // **Lấy thông tin User**
 router.get("/", getAllUsers);
-router.get("/me" , getMe);
+router.post("/batch", getUsersByIds);
+router.get("/me", getMe);
 router.put("/me", updateUserProfile);
 router.get("/:userId", getUserProfile);
+
+router.put("/likes/:songId", syncUserWithMongoDB, protectRoute, likeSong);
 
 // **Follow / Unfollow**
 router.post("/:userId/follow", followUser);
@@ -29,6 +45,5 @@ router.get("/:userId/messages", getMessages);
 
 // **Cập nhật gói Subscription**
 router.put("/me/subscription", updateSubscriptionPlan);
-
 
 export default router;

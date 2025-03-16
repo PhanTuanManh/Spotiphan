@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { usePlayerStore } from "@/stores/usePlayerStore";
-import { ISong } from "@/types"; // Cập nhật import từ Song sang ISong
+import { ISong } from "@/types"; // Thay đổi từ Song sang ISong
 import { Pause, Play } from "lucide-react";
 
 const PlayButton = ({ song }: { song: ISong }) => {

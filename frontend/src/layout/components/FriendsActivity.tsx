@@ -3,15 +3,59 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatStore } from "@/stores/useChatStore";
 import { useUser } from "@clerk/clerk-react";
 import { HeadphonesIcon, Music, Users } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { axiosInstance } from "@/lib/axios";
 
 const FriendsActivity = () => {
   const { users, fetchUsers, onlineUsers, userActivities } = useChatStore();
   const { user } = useUser();
+  const [artistNames, setArtistNames] = useState<{ [key: string]: string }>({}); // Lưu tên nghệ sĩ
+  const [loadingArtists, setLoadingArtists] = useState<boolean>(false); // Trạng thái loading
 
   useEffect(() => {
     if (user) fetchUsers();
   }, [fetchUsers, user]);
+
+  // Hàm lấy tên nghệ sĩ từ danh sách ID
+  const fetchArtistNames = async (artistIds: string[]) => {
+    setLoadingArtists(true);
+    const names: { [key: string]: string } = {};
+
+    try {
+      // Gọi API để lấy tên nghệ sĩ từ danh sách ID
+      const response = await axiosInstance.post("/users/batch", {
+        ids: artistIds,
+      });
+      response.data.forEach((artist: { _id: string; fullName: string }) => {
+        names[artist._id] = artist.fullName;
+      });
+    } catch (error) {
+      console.error("Failed to fetch artist names:", error);
+      artistIds.forEach((id) => (names[id] = "Unknown Artist")); // Fallback nếu có lỗi
+    } finally {
+      setLoadingArtists(false);
+    }
+
+    setArtistNames((prev) => ({ ...prev, ...names })); // Cập nhật state với tên nghệ sĩ mới
+  };
+
+  // Lấy tên nghệ sĩ khi userActivities thay đổi
+  useEffect(() => {
+    const artistIds = Array.from(userActivities.values())
+      .map((activity) => {
+        if (activity.startsWith("Playing")) {
+          return activity.split(" by ")[1]; // Lấy ID nghệ sĩ từ chuỗi hoạt động
+        }
+        return null;
+      })
+      .filter((id) => id !== null) as string[]; // Lọc bỏ các giá trị null
+
+    // Chỉ gọi API nếu có ID mới chưa được lấy tên
+    const newArtistIds = artistIds.filter((id) => !artistNames[id]);
+    if (newArtistIds.length > 0) {
+      fetchArtistNames(newArtistIds);
+    }
+  }, [userActivities]);
 
   return (
     <div className="h-full bg-zinc-900 rounded-lg flex flex-col">
@@ -29,6 +73,11 @@ const FriendsActivity = () => {
             users.map((user) => {
               const activity = userActivities.get(user.clerkId);
               const isPlaying = activity && activity !== "Idle";
+              const songName = isPlaying
+                ? activity.replace("Playing ", "").split(" by ")[0]
+                : "";
+              const artistId = isPlaying ? activity.split(" by ")[1] : "";
+              const artistName = artistNames[artistId] || "Loading..."; // Lấy tên nghệ sĩ từ artistNames
 
               return (
                 <div
@@ -61,10 +110,10 @@ const FriendsActivity = () => {
                       {isPlaying ? (
                         <div className="mt-1">
                           <div className="mt-1 text-sm text-white font-medium truncate">
-                            {activity.replace("Playing ", "").split(" by ")[0]}
+                            {songName}
                           </div>
                           <div className="text-xs text-zinc-400 truncate">
-                            {activity.split(" by ")[1]}
+                            by {artistName} {/* Hiển thị tên nghệ sĩ */}
                           </div>
                         </div>
                       ) : (

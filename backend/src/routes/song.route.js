@@ -3,7 +3,10 @@
 import { Router } from "express";
 import {
   getAllSongs,
+  getFeaturedSongs,
   getLatestSingles,
+  getMadeForYouSongs,
+  getTrendingSongs,
 } from "../controller/song.controller.js";
 import {
   protectRoute,
@@ -66,5 +69,8 @@ router.delete(
   deleteSingleOrEP
 );
 router.get("/singles/lastest", getLatestSingles);
+router.get("/featured", getFeaturedSongs);
+router.get("/made-for-you", getMadeForYouSongs);
+router.get("/trending", getTrendingSongs);
 
 export default router;

@@ -34,6 +34,44 @@ export const initializeSocket = (server) => {
       io.emit("activity_updated", { userId, activity });
     });
 
+    socket.on("toggle_like", async ({ songId, userId }) => {
+      try {
+        const user = await User.findOne({ clerkId: userId });
+        const song = await Song.findById(songId);
+
+        if (!user || !song) {
+          return socket.emit("toggle_like_error", "User or song not found");
+        }
+
+        const isLiked = user.likedSongs.includes(songId);
+
+        if (isLiked) {
+          // Nếu đã thích, bỏ thích
+          user.likedSongs = user.likedSongs.filter(
+            (id) => id.toString() !== songId
+          );
+          song.likes = song.likes.filter(
+            (id) => id.toString() !== user._id.toString()
+          );
+        } else {
+          // Nếu chưa thích, thêm vào danh sách thích
+          user.likedSongs.push(songId);
+          song.likes.push(user._id);
+        }
+
+        await user.save();
+        await song.save();
+
+        // Gửi sự kiện cập nhật like/unlike cho tất cả client
+        io.emit("like_toggled", { songId, userId, isLiked: !isLiked });
+
+        socket.emit("toggle_like_success", { songId, isLiked: !isLiked });
+      } catch (error) {
+        console.error("Error toggling like:", error);
+        socket.emit("toggle_like_error", error.message);
+      }
+    });
+
     socket.on("send_message", async (data) => {
       try {
         const { senderId, receiverId, content } = data;

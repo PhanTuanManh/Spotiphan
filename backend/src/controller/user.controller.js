@@ -4,6 +4,7 @@ import { io } from "../lib/socket.js"; // WebSocket để gửi thông báo real
 import { Message } from "../models/message.model.js";
 import { Payment } from "../models/payment.model.js";
 import { User } from "../models/user.model.js";
+import { Song } from "../models/song.model.js";
 
 // helper function for cloudinary uploads
 // const uploadToCloudinary = async (file) => {
@@ -53,6 +54,67 @@ export const getUserProfile = async (req, res, next) => {
     res.status(200).json(user);
   } catch (error) {
     console.error("🔥 Error in getUserProfile:", error);
+    next(error);
+  }
+};
+
+/**
+ * Get multiple user profiles by IDs
+ */
+export const getUsersByIds = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    const artists = await User.find({ _id: { $in: ids } }).select(
+      "_id fullName"
+    );
+    res.status(200).json(artists);
+  } catch (error) {
+    console.error("Error in getUsersByIds:", error);
+    next(error);
+  }
+};
+
+export const likeSong = async (req, res, next) => {
+  try {
+    const { songId } = req.params; // Lấy songId từ params
+    const userId = req.auth.userId;
+
+    // Tìm user và song
+    const user = await User.findOne({ clerkId: userId });
+    const song = await Song.findById(songId);
+
+    if (!user || !song) {
+      return res.status(404).json({ message: "User or song not found" });
+    }
+
+    // Kiểm tra xem bài hát đã được thích chưa
+    const isLiked = user.likedSongs.includes(songId);
+
+    if (isLiked) {
+      // Nếu đã thích, bỏ thích
+      user.likedSongs = user.likedSongs.filter(
+        (id) => id.toString() !== songId
+      );
+      song.likes = song.likes.filter(
+        (id) => id.toString() !== user._id.toString()
+      );
+    } else {
+      // Nếu chưa thích, thêm vào danh sách thích
+      user.likedSongs.push(songId);
+      song.likes.push(user._id);
+    }
+
+    await user.save();
+    await song.save();
+
+    res.status(200).json({
+      message: isLiked
+        ? "Song unliked successfully"
+        : "Song liked successfully",
+      isLiked: !isLiked, // Trả về trạng thái mới của bài hát (đã thích hay chưa)
+    });
+  } catch (error) {
+    console.error("Error toggling like:", error);
     next(error);
   }
 };

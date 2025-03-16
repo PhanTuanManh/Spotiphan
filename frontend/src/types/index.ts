@@ -59,7 +59,7 @@ export type PaymentStatus = "pending" | "completed" | "failed" | "canceled";
 export type PaymentMethod = "PayPal" | "MoMo";
 
 export interface IPayment extends BaseModel {
-  userId: string;
+  userId: IUser;
   planId: string;
   amount: number;
   currency: string;

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ISong } from "@/types"; // Đảm bảo import ISong từ file types
+import { ISong } from "@/types"; // Thay đổi từ Song sang ISong
 import { useChatStore } from "./useChatStore";
 
 interface PlayerStore {
@@ -14,6 +14,7 @@ interface PlayerStore {
   togglePlay: () => void;
   playNext: () => void;
   playPrevious: () => void;
+  playPlaylist: (songs: ISong[], startIndex?: number) => void; // Thêm dòng này
 }
 
 export const usePlayerStore = create<PlayerStore>((set, get) => ({
@@ -27,6 +28,27 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       queue: songs,
       currentSong: get().currentSong || songs[0],
       currentIndex: get().currentIndex === -1 ? 0 : get().currentIndex,
+    });
+  },
+
+  playPlaylist: (songs: ISong[], startIndex = 0) => {
+    if (songs.length === 0) return;
+
+    const song = songs[startIndex];
+
+    const socket = useChatStore.getState().socket;
+    if (socket.auth) {
+      socket.emit("update_activity", {
+        userId: socket.auth.userId,
+        activity: `Playing ${song.title} by ${song.artist}`,
+      });
+    }
+
+    set({
+      queue: songs,
+      currentSong: song,
+      currentIndex: startIndex,
+      isPlaying: true,
     });
   },
 

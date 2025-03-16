@@ -201,11 +201,11 @@ export const getPlaylistById = async (req, res, next) => {
     }
 
     // Nếu playlist là private, kiểm tra quyền truy cập
-    if (!playlist.isPublic && playlist.userId.toString() !== req.auth.userId) {
-      return res
-        .status(403)
-        .json({ message: "You do not have permission to view this playlist" });
-    }
+    // if (!playlist.isPublic && playlist.userId.toString() !== req.auth.userId) {
+    //   return res
+    //     .status(403)
+    //     .json({ message: "You do not have permission to view this playlist" });
+    // }
 
     res.status(200).json(playlist);
   } catch (error) {

@@ -10,6 +10,7 @@ import { Toaster } from "react-hot-toast";
 import NotFoundPage from "./pages/404/NotFoundPage";
 import ChatPage from "./pages/chat/ChatPage";
 import ArtistPage from "./pages/artist/ArtistPage";
+import PlaylistPage from "./pages/playlist/PlaylistPage";
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/albums/:albumId" element={<AlbumPage />} />
+          <Route path="/playlists/:playlistId" element={<PlaylistPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
