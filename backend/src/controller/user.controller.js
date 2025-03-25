@@ -10,7 +10,7 @@ import { Song } from "../models/song.model.js";
 // const uploadToCloudinary = async (file) => {
 // 	try {
 // 		const result = await cloudinary.uploader.upload(file.tempFilePath, {
-// 			resource_type: "auto",
+// 			resource_type: "auto",`
 // 		});
 // 		return result.secure_url;
 // 	} catch (error) {

@@ -463,6 +463,9 @@ export const getFeaturedSongs = async (req, res, next) => {
     // fetch 6 random songs using mongodb's aggregation pipeline
     const songs = await Song.aggregate([
       {
+        $match: { status: "approved" }, // Chỉ lấy bài hát có status là "approved"
+      },
+      {
         $sample: { size: 6 },
       },
       {
@@ -486,6 +489,9 @@ export const getMadeForYouSongs = async (req, res, next) => {
   try {
     const songs = await Song.aggregate([
       {
+        $match: { status: "approved" }, // Chỉ lấy bài hát có status là "approved"
+      },
+      {
         $sample: { size: 4 },
       },
       {
@@ -508,6 +514,9 @@ export const getMadeForYouSongs = async (req, res, next) => {
 export const getTrendingSongs = async (req, res, next) => {
   try {
     const songs = await Song.aggregate([
+      {
+        $match: { status: "approved" }, // Chỉ lấy bài hát có status là "approved"
+      },
       {
         $sample: { size: 4 },
       },

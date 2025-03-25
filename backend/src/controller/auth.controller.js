@@ -1,4 +1,4 @@
-// controllers/auth.controller.js
+// backend/src/controllers/auth.controller.js
 
 import { User } from "../models/user.model.js";
 
@@ -66,4 +66,19 @@ export const getUserStatus = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+export const getCurrentUser = async (req, res) => {
+  const user = await User.findById(req.user._id)
+    .populate("subscriptionPlan")
+    .populate("likedSongs")
+    .populate("playlists");
+
+  res.json({
+    id: user._id,
+    user,
+    isAdmin: user.role === "admin",
+    isPremium: ["premium", "artist", "admin"].includes(user.role),
+    isArtist: user.role === "artist",
+  });
 };

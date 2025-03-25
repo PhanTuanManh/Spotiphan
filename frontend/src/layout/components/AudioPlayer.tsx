@@ -7,23 +7,13 @@ const AudioPlayer = () => {
 
   const { currentSong, isPlaying, playNext } = usePlayerStore();
 
-  // Lấy base URL từ window.location.origin
-  const baseUrl = window.location.origin;
-
-  // Handle play/pause logic
+  // handle play/pause logic
   useEffect(() => {
-    if (!audioRef.current) return;
-
-    if (isPlaying) {
-      audioRef.current.play().catch((error) => {
-        console.error("Failed to play audio:", error);
-      });
-    } else {
-      audioRef.current.pause();
-    }
+    if (isPlaying) audioRef.current?.play();
+    else audioRef.current?.pause();
   }, [isPlaying]);
 
-  // Handle song ends
+  // handle song ends
   useEffect(() => {
     const audio = audioRef.current;
 
@@ -36,49 +26,25 @@ const AudioPlayer = () => {
     return () => audio?.removeEventListener("ended", handleEnded);
   }, [playNext]);
 
-  // Handle song changes
+  // handle song changes
   useEffect(() => {
     if (!audioRef.current || !currentSong) return;
 
     const audio = audioRef.current;
 
-    // Resolve đường dẫn tương đối thành đường dẫn tuyệt đối
-    const fullAudioUrl = `${baseUrl}${currentSong.audioUrl}`;
-
-    // Check if this is actually a new song
-    const isSongChange = prevSongRef.current !== fullAudioUrl;
+    // check if this is actually a new song
+    const isSongChange = prevSongRef.current !== currentSong?.audioUrl;
     if (isSongChange) {
-      // Ensure audioUrl is a valid URL
-      if (!currentSong.audioUrl) {
-        console.error("Invalid audioUrl:", currentSong.audioUrl);
-        return;
-      }
+      audio.src = currentSong?.audioUrl;
+      // reset the playback position
+      audio.currentTime = 0;
 
-      // Set the new audio source
-      audio.src = fullAudioUrl;
-      audio.currentTime = 0; // Reset playback position
-      prevSongRef.current = fullAudioUrl;
+      prevSongRef.current = currentSong?.audioUrl;
 
-      // Wait for the audio to load before playing
-      const handleCanPlay = () => {
-        if (isPlaying) {
-          audio.play().catch((error) => {
-            console.error("Failed to play audio:", error);
-          });
-        }
-        audio.removeEventListener("canplay", handleCanPlay); // Clean up the event listener
-      };
-
-      audio.addEventListener("canplay", handleCanPlay);
-
-      // Clean up the event listener if the component unmounts or the song changes again
-      return () => {
-        audio.removeEventListener("canplay", handleCanPlay);
-      };
+      if (isPlaying) audio.play();
     }
-  }, [currentSong, isPlaying, baseUrl]);
+  }, [currentSong, isPlaying]);
 
   return <audio ref={audioRef} />;
 };
-
 export default AudioPlayer;

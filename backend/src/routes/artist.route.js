@@ -14,18 +14,14 @@ import {
   toggleArchiveSong,
   updateSong,
 } from "../controller/song.controller.js";
-import {
-  protectRoute,
-  syncUserWithMongoDB,
-} from "../middleware/auth.middleware.js";
+import { authenticate } from "../middleware/auth.middleware.js";
 import {
   requireArtist,
   requireArtistOrAdmin,
 } from "../middleware/authorization.middleware.js";
 
 const router = Router();
-router.use(syncUserWithMongoDB);
-router.use(protectRoute);
+router.use(authenticate);
 
 // **Quản lý Album (chỉ dành cho Artist)**
 router.get("/my-albums", requireArtist, getMyAlbums);

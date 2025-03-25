@@ -1,9 +1,11 @@
+// src/pages/auth-callback/AuthCallbackPage.tsx
+
 import { Card, CardContent } from "@/components/ui/card";
-import { axiosInstance } from "@/lib/axios";
 import { useUser } from "@clerk/clerk-react";
 import { Loader } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { axiosInstance } from "@/lib/axios";
 
 const AuthCallbackPage = () => {
   const { isLoaded, user } = useUser();

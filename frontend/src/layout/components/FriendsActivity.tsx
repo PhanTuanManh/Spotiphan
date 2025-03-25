@@ -5,6 +5,7 @@ import { useUser } from "@clerk/clerk-react";
 import { HeadphonesIcon, Music, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { axiosInstance } from "@/lib/axios";
+import BlurText from "@/components/ui/blurText";
 
 const FriendsActivity = () => {
   const { users, fetchUsers, onlineUsers, userActivities } = useChatStore();
@@ -62,7 +63,13 @@ const FriendsActivity = () => {
       <div className="p-4 flex justify-between items-center border-b border-zinc-800">
         <div className="flex items-center gap-2">
           <Users className="size-5 shrink-0" />
-          <h2 className="font-semibold">What they're listening to</h2>
+          <BlurText
+            text="What are they listening to?"
+            delay={50}
+            animateBy="letters"
+            direction="top"
+            className="font-semibold"
+          />
         </div>
       </div>
       {!user && <LoginPrompt />}

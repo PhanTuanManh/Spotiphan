@@ -5,11 +5,9 @@ import PlayButton from "./PlayButton";
 import { axiosInstance } from "@/lib/axios"; // Import axiosInstance để gọi API
 
 const FeaturedSection = () => {
-  const { isLoading, featuredSongs, error } = useMusicStore();
+  const { isLoading, featuredSongs } = useMusicStore();
   const [artistNames, setArtistNames] = useState<{ [key: string]: string }>({}); // Lưu tên nghệ sĩ
   const [loadingArtists, setLoadingArtists] = useState<boolean>(false); // Trạng thái loading
-
-  console.log("🎵 Featured Songs:", featuredSongs);
 
   // Hàm lấy tên nghệ sĩ từ danh sách ID
   const fetchArtistNames = async (artistIds: string[]) => {
@@ -47,8 +45,6 @@ const FeaturedSection = () => {
   }, [featuredSongs]);
 
   if (isLoading || loadingArtists) return <FeaturedGridSkeleton />;
-
-  if (error) return <p className="text-red-500 mb-4 text-lg">{error}</p>;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">

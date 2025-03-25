@@ -1,8 +1,9 @@
-// src/lib/socket.js
+// backend/src/lib/socket.js
 
 import { Server } from "socket.io";
 import { Message } from "../models/message.model.js";
 import { User } from "../models/user.model.js";
+import { verifyToken } from "@clerk/express";
 
 let io; // Declare io globally
 
@@ -12,6 +13,17 @@ export const initializeSocket = (server) => {
       origin: "http://localhost:3000",
       credentials: true,
     },
+  });
+
+  io.use(async (socket, next) => {
+    try {
+      const token = socket.handshake.auth.token;
+      const { userId } = await verifyToken(token);
+      socket.userId = userId;
+      next();
+    } catch (error) {
+      next(new Error("Authentication error"));
+    }
   });
 
   const userSockets = new Map();

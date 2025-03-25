@@ -1,3 +1,5 @@
+// src/components/SignInOAuthButtons.tsx
+
 import ReactDOM from "react-dom";
 import { useState, ReactNode } from "react";
 import { SignIn, SignUp } from "@clerk/clerk-react";
@@ -44,8 +46,7 @@ const SignInRegisterModal: React.FC = () => {
             setModalOpen(true);
           }}
           variant="default"
-          className="w-full bg-primary text-primary-foreground h-11 rounded-lg shadow-md hover:bg-primary/90"
-        >
+          className="w-full bg-primary text-primary-foreground h-11 rounded-lg shadow-md hover:bg-primary/90">
           Login
         </Button>
         <Button
@@ -54,8 +55,7 @@ const SignInRegisterModal: React.FC = () => {
             setModalOpen(true);
           }}
           variant="secondary"
-          className="w-full bg-secondary text-secondary-foreground h-11 rounded-lg shadow-md hover:bg-secondary/90"
-        >
+          className="w-full bg-secondary text-secondary-foreground h-11 rounded-lg shadow-md hover:bg-secondary/90">
           Register
         </Button>
       </div>

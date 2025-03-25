@@ -1,48 +1,54 @@
 import { create } from "zustand";
-import { axiosInstance } from "@/lib/axios";
+import { axiosInstance as axios } from "@/lib/axios";
+import { IUser, UserRole } from "@/types";
 
 interface AuthState {
-  clerk_id: string | null;
-  user_id: string | null;
-  role: "free" | "premium" | "artist" | "admin" | null;
+  clerkId: string | null;
+  userId: string | null;
+  user: IUser | null;
+  role: UserRole | null;
   isLoading: boolean;
-  setUserId: (id: string) => void;
-  setClerkId: (id: string) => void;
-  checkUserRole: () => Promise<void>;
+  error: string | null;
+  loadUser: (clerkId: string) => Promise<void>;
+  clearUser: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  clerk_id: null,
-  user_id: null,
+  clerkId: null,
+  userId: null,
+  user: null,
   role: null,
-  isLoading: true,
+  isLoading: false,
+  error: null,
 
-  setUserId: (id: string) => set({ user_id: id }),
-  setClerkId: (id: string) => set({ clerk_id: id }),
-
-  checkUserRole: async () => {
-    set({ isLoading: true });
+  loadUser: async (clerkId) => {
+    set({ isLoading: true, error: null });
 
     try {
-      const response = await axiosInstance.get("/auth/me");
+      const { data } = await axios.get("/auth/me");
 
-      console.log("🔍 API response:", response.data); // Kiểm tra dữ liệu trả về
-
-      const { id, user } = response.data; // ✅ Lấy id từ response.data
-      const role = user?.role || "free"; // ✅ Lấy role từ user, mặc định là "free"
-
-      if (!id) {
-        console.error("❌ Error: ID không tồn tại trong API response!");
-        set({ user_id: null, role: null, isLoading: false });
-        return;
-      }
-
-      set({ user_id: id, role, isLoading: false });
-
-      console.log("✅ User ID updated from API:", id);
-    } catch (error) {
-      console.error("❌ Error fetching user role:", error);
-      set({ user_id: null, role: null, isLoading: false });
+      set({
+        clerkId,
+        userId: data.id,
+        user: data.user,
+        role: data.user.role,
+        isLoading: false,
+      });
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || "Failed to load user",
+        isLoading: false,
+      });
+      throw error;
     }
   },
+
+  clearUser: () =>
+    set({
+      clerkId: null,
+      userId: null,
+      user: null,
+      role: null,
+      error: null,
+    }),
 }));

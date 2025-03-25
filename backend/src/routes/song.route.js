@@ -2,18 +2,6 @@
 
 import { Router } from "express";
 import {
-  getAllSongs,
-  getFeaturedSongs,
-  getLatestSingles,
-  getMadeForYouSongs,
-  getTrendingSongs,
-} from "../controller/song.controller.js";
-import {
-  protectRoute,
-  syncUserWithMongoDB,
-} from "../middleware/auth.middleware.js";
-import { requireArtistOrAdmin } from "../middleware/authorization.middleware.js";
-import {
   approveSingleOrEP,
   archiveSingleOrEP,
   deleteSingleOrEP,
@@ -21,6 +9,15 @@ import {
   rejectSingleOrEP,
   unarchiveSingleOrEP,
 } from "../controller/admin.controller.js";
+import {
+  getAllSongs,
+  getFeaturedSongs,
+  getLatestSingles,
+  getMadeForYouSongs,
+  getTrendingSongs,
+} from "../controller/song.controller.js";
+import { authenticate } from "../middleware/auth.middleware.js";
+import { requireArtistOrAdmin } from "../middleware/authorization.middleware.js";
 // import { protectRoute, requireAdmin } from "../middleware/auth.middleware.js";
 
 const router = Router();
@@ -28,43 +25,43 @@ const router = Router();
 router.get("/", getAllSongs);
 router.put(
   "/singles/:songId/approve",
-  syncUserWithMongoDB,
-  protectRoute,
+
+  authenticate,
   requireArtistOrAdmin,
   approveSingleOrEP
 );
 router.put(
   "/singles/:songId/reject",
-  syncUserWithMongoDB,
-  protectRoute,
+
+  authenticate,
   requireArtistOrAdmin,
   rejectSingleOrEP
 );
 router.get(
   "/singles",
-  syncUserWithMongoDB,
-  protectRoute,
+
+  authenticate,
   requireArtistOrAdmin,
   getAllSinglesOrEPs
 );
 router.put(
   "/singles/:songId/archive",
-  syncUserWithMongoDB,
-  protectRoute,
+
+  authenticate,
   requireArtistOrAdmin,
   archiveSingleOrEP
 );
 router.put(
   "/singles/:songId/unarchive",
-  syncUserWithMongoDB,
-  protectRoute,
+
+  authenticate,
   requireArtistOrAdmin,
   unarchiveSingleOrEP
 );
 router.delete(
   "/singles/:songId",
-  syncUserWithMongoDB,
-  protectRoute,
+
+  authenticate,
   requireArtistOrAdmin,
   deleteSingleOrEP
 );

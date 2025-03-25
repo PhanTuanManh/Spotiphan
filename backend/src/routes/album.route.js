@@ -8,10 +8,7 @@ import {
   getApprovedAlbums,
   unarchiveAlbum,
 } from "../controller/album.controller.js";
-import {
-  protectRoute,
-  syncUserWithMongoDB,
-} from "../middleware/auth.middleware.js";
+import { authenticate } from "../middleware/auth.middleware.js";
 import { requireArtistOrAdmin } from "../middleware/authorization.middleware.js";
 
 const router = Router();
@@ -22,24 +19,15 @@ router.get("/:albumId", getAlbumById);
 router.put(
   "/:albumId/archive",
   requireArtistOrAdmin,
-  syncUserWithMongoDB,
-  protectRoute,
+  authenticate,
   archiveAlbum
 );
 router.put(
   "/:albumId/unarchive",
   requireArtistOrAdmin,
-  syncUserWithMongoDB,
-  protectRoute,
+  authenticate,
   unarchiveAlbum
 );
-router.delete(
-  "/:albumId",
-  syncUserWithMongoDB,
-  syncUserWithMongoDB,
-  protectRoute,
-  requireArtistOrAdmin,
-  deleteAlbum
-);
+router.delete("/:albumId", authenticate, requireArtistOrAdmin, deleteAlbum);
 
 export default router;

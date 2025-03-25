@@ -28,6 +28,8 @@ export const PlaybackControls = () => {
   const [volume, setVolume] = useState(75);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [seekValue, setSeekValue] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -56,9 +58,14 @@ export const PlaybackControls = () => {
   }, [currentSong]);
 
   const handleSeek = (value: number[]) => {
+    setSeekValue(value[0]);
+  };
+
+  const handleSeekEnd = () => {
     if (audioRef.current) {
-      audioRef.current.currentTime = value[0];
+      audioRef.current.currentTime = seekValue;
     }
+    setIsSeeking(false);
   };
 
   return (
@@ -136,11 +143,13 @@ export const PlaybackControls = () => {
               {formatTime(currentTime)}
             </div>
             <Slider
-              value={[currentTime]}
+              value={[isSeeking ? seekValue : currentTime]}
               max={duration || 100}
               step={1}
               className="w-full hover:cursor-grab active:cursor-grabbing"
               onValueChange={handleSeek}
+              onPointerDown={() => setIsSeeking(true)}
+              onPointerUp={handleSeekEnd}
             />
             <div className="text-xs text-zinc-400">{formatTime(duration)}</div>
           </div>

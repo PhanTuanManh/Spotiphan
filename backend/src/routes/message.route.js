@@ -2,11 +2,11 @@
 
 import { Router } from "express";
 import { sendMessage } from "../controller/user.controller.js";
-import { protectRoute } from "../middleware/auth.middleware.js";
+import { authenticate } from "../middleware/auth.middleware.js";
 // import { protectRoute, requireAdmin } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-router.get("/", protectRoute, sendMessage);
+router.get("/", authenticate, sendMessage);
 
 export default router;

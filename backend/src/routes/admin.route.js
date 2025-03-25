@@ -8,7 +8,6 @@ import {
   checkAdmin,
   createSubscriptionPlan,
   createUser,
-  deleteAlbum,
   deleteSingleOrEP,
   deleteSubscriptionPlan,
   deleteUser,
@@ -22,70 +21,57 @@ import {
   updateSubscriptionPlan,
 } from "../controller/admin.controller.js";
 import {
-  createCategory,
-  deleteCategory,
-  getCategories,
-  getCategoryById,
-  updateCategory,
-} from "../controller/category.controller.js";
-import {
-  protectRoute,
-  requireAdmin,
-  syncUserWithMongoDB,
-} from "../middleware/auth.middleware.js";
-import {
   createAdvertisement,
   deleteAdvertisement,
   getAllAdvertisements,
   toggleAdvertisementActive,
   updateAdvertisement,
 } from "../controller/advertisement.controller.js";
+import {
+  createCategory,
+  deleteCategory,
+  getCategoryById,
+  updateCategory,
+} from "../controller/category.controller.js";
+import { authenticate, requireAdmin } from "../middleware/auth.middleware.js";
 
 const router = Router();
-router.use(protectRoute);
+router.use(authenticate);
 router.use(requireAdmin);
 
 // **check admin**
 router.get("/check", checkAdmin);
 
 // **Quản lý Single/EP**
-router.put("/singles/:songId/approve", syncUserWithMongoDB, approveSingleOrEP);
-router.put("/singles/:songId/reject", syncUserWithMongoDB, rejectSingleOrEP);
-router.get("/singles", syncUserWithMongoDB, getAllSinglesOrEPs);
-router.post("/singles/:songId/archive", syncUserWithMongoDB, archiveSingleOrEP);
-router.delete("/singles/:songId", syncUserWithMongoDB, deleteSingleOrEP);
+router.put("/singles/:songId/approve", approveSingleOrEP);
+router.put("/singles/:songId/reject", rejectSingleOrEP);
+router.get("/singles", getAllSinglesOrEPs);
+router.post("/singles/:songId/archive", archiveSingleOrEP);
+router.delete("/singles/:songId", deleteSingleOrEP);
 
 // **Quản lý Album**
-router.put("/albums/:albumId/approve", syncUserWithMongoDB, approveAlbum);
-router.put("/albums/:albumId/reject", syncUserWithMongoDB, rejectAlbum);
-router.get("/albums", syncUserWithMongoDB, getAllAlbums);
+router.put("/albums/:albumId/approve", approveAlbum);
+router.put("/albums/:albumId/reject", rejectAlbum);
+router.get("/albums", getAllAlbums);
 
 // **Quản lý User**
-router.post("/users", syncUserWithMongoDB, createUser);
-router.get("/users", syncUserWithMongoDB, getAllUsers);
-router.delete("/users/:userId", syncUserWithMongoDB, deleteUser);
-router.put("/users/:userId/toggle-block", syncUserWithMongoDB, toggleBlockUser);
+router.post("/users", createUser);
+router.get("/users", getAllUsers);
+router.delete("/users/:userId", deleteUser);
+router.put("/users/:userId/toggle-block", toggleBlockUser);
 
 // **Quản lý Subscription Plans**
-router.post("/subscriptions", syncUserWithMongoDB, createSubscriptionPlan);
-router.delete(
-  "/subscriptions/:id",
-  syncUserWithMongoDB,
-  deleteSubscriptionPlan
-);
-router.put("/subscriptions/:id", syncUserWithMongoDB, updateSubscriptionPlan);
-router.get("/subscriptions", syncUserWithMongoDB, getAllSubscriptionPlans);
+router.post("/subscriptions", createSubscriptionPlan);
+router.delete("/subscriptions/:id", deleteSubscriptionPlan);
+router.put("/subscriptions/:id", updateSubscriptionPlan);
+router.get("/subscriptions", getAllSubscriptionPlans);
 
 // **Quản lý Quảng cáo**
-router.get("/advertisements", syncUserWithMongoDB, getAllAdvertisements);
-router.post("/advertisements", syncUserWithMongoDB, createAdvertisement);
-router.delete("/advertisements/:id", syncUserWithMongoDB, deleteAdvertisement);
-router.put("/advertisements/:id", syncUserWithMongoDB, updateAdvertisement);
-router.put(
-  "/advertisements/:id/toggle-active",
-  syncUserWithMongoDB,
-  toggleAdvertisementActive
-);
+router.get("/advertisements", getAllAdvertisements);
+router.post("/advertisements", createAdvertisement);
+router.delete("/advertisements/:id", deleteAdvertisement);
+router.put("/advertisements/:id", updateAdvertisement);
+router.put("/advertisements/:id/toggle-active", toggleAdvertisementActive);
 
 // **Quản lý category
 router.post("/categories/", createCategory);
