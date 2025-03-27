@@ -23,6 +23,7 @@ import artistRoutes from "./routes/artist.route.js";
 import playlistRoutes from "./routes/playList.route.js";
 import userListeningHistoryRoutes from "./routes/userListeningHistory.route.js";
 import advertisementRoutes from "./routes/advertisement.route.js";
+import searchRoutes from "./routes/search.route.js";
 import categoryRoutes from "./routes/category.route.js";
 import messageRoutes from "./routes/message.route.js";
 
@@ -83,6 +84,7 @@ app.use("/api/playlists", playlistRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/history", userListeningHistoryRoutes);
 app.use("/api/advertisements", advertisementRoutes);
+app.use("/api/search", searchRoutes);
 app.use("/uploads", express.static(path.join(process.cwd(), "public/uploads")));
 
 if (process.env.NODE_ENV === "production") {

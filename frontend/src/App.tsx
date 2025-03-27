@@ -11,6 +11,8 @@ import NotFoundPage from "./pages/404/NotFoundPage";
 import ChatPage from "./pages/chat/ChatPage";
 import ArtistPage from "./pages/artist/ArtistPage";
 import PlaylistPage from "./pages/playlist/PlaylistPage";
+import { Search } from "lucide-react";
+import SearchPage from "./pages/search/SearchPage";
 
 function App() {
   return (
@@ -30,6 +32,7 @@ function App() {
 
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/search" element={<SearchPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/albums/:albumId" element={<AlbumPage />} />
           <Route path="/playlists/:playlistId" element={<PlaylistPage />} />

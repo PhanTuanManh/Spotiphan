@@ -122,6 +122,12 @@ const LeftSidebar = () => {
     }
   }, [isLoggedIn, isFreeUser, navigate]);
 
+  const handleFindAlbumsClick = useCallback(() => {
+    if (!isLoggedIn) {
+      setShowSignInModal(true);
+    }
+  }, [isLoggedIn]);
+
   const closeSignInModal = useCallback(() => {
     setShowSignInModal(false);
   }, []);
@@ -274,6 +280,17 @@ const LeftSidebar = () => {
 
   const renderAlbums = () => {
     if (isLoading) return <PlaylistSkeleton />;
+
+    if (!isLoggedIn) {
+      return (
+        <CreatePlaylistCard
+          title="Let's Find Some Albums"
+          subtitle="We'll help you discover new music"
+          buttonText="Find Some Albums"
+          onClick={handleFindAlbumsClick}
+        />
+      );
+    }
 
     if (Array.isArray(albums) && albums.length > 0) {
       return albums.map((album) => (
@@ -437,6 +454,31 @@ const LeftSidebar = () => {
                 Albums
               </h3>
               {renderAlbums()}
+            </div>
+            <div className="">
+              <div className="flex flex-wrap text-[11px] text-zinc-400">
+                <Link className="mb-[8px] mr-[16px]" to="/">
+                  Legal
+                </Link>
+                <Link className="mb-[8px] mr-[16px]" to="/">
+                  Safety & Privacy Center
+                </Link>
+                <Link className="mb-[8px] mr-[16px]" to="/">
+                  Privacy Policy
+                </Link>
+                <Link className="mb-[8px] mr-[16px]" to="/">
+                  Cookies
+                </Link>
+                <Link className="mb-[8px] mr-[16px]" to="/">
+                  About Ads
+                </Link>
+                <Link className="mb-[8px] mr-[16px]" to="/">
+                  Accessibility
+                </Link>
+              </div>
+              <Link className="text-sm" to="/">
+                Cookies
+              </Link>
             </div>
           </div>
         </ScrollArea>

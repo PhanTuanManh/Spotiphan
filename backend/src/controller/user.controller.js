@@ -1,4 +1,4 @@
-// src/controllers/user.controller.js
+// backend/src/controllers/user.controller.js
 import mongoose from "mongoose";
 import { io } from "../lib/socket.js"; // WebSocket để gửi thông báo realtime
 import { Message } from "../models/message.model.js";

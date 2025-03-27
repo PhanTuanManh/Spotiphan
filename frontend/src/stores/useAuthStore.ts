@@ -1,3 +1,5 @@
+// frontend/src/stores/useAuthStore.ts
+
 import { create } from "zustand";
 import { axiosInstance as axios } from "@/lib/axios";
 import { IUser, UserRole } from "@/types";

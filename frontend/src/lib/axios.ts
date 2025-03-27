@@ -1,3 +1,5 @@
+// frontend/src/lib/axios.ts
+
 import axios from "axios";
 
 // Tạo instance axios cơ bản

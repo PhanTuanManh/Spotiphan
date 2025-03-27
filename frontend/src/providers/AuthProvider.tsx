@@ -1,3 +1,5 @@
+// frontend/src/providers/AuthProvider.tsx
+
 import { setupAxiosInterceptors } from "@/lib/axios";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useSocketStore } from "@/stores/useSocketStore";

@@ -1,4 +1,4 @@
-//src/middleware/auth.middleware.js
+// backend/src/middleware/auth.middleware.js
 
 import { clerkClient } from "@clerk/express";
 import { User } from "../models/user.model.js";
