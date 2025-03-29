@@ -1,3 +1,5 @@
+// frontend/src/pages/chat/components/ChatPage.tsx
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useChatStore } from "@/stores/useChatStore";
@@ -14,13 +16,23 @@ type EmojiObject = {
 const MessageInput = () => {
   const [newMessage, setNewMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const { user } = useUser();
   const { selectedUser, sendMessage } = useChatStore();
 
-  const handleSend = () => {
-    if (!selectedUser || !user || !newMessage.trim()) return;
-    sendMessage(selectedUser.clerkId, user.id, newMessage.trim());
-    setNewMessage("");
+  const handleSend = async () => {
+    if (!selectedUser || !user || !newMessage.trim() || isSending) return;
+
+    setIsSending(true);
+    try {
+      await sendMessage(selectedUser.clerkId, user.id, newMessage.trim());
+      setNewMessage("");
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      // Có thể thêm toast notification ở đây
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const addEmoji = (emoji: EmojiObject) => {

@@ -536,3 +536,16 @@ export const getTrendingSongs = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getSingleSong = async (req, res, next) => {
+  try {
+    const songId = req.params.songId;
+    const song = await Song.findById(songId);
+    if (!song) {
+      return res.status(404).json({ message: "Bài hát không tìm thấy" });
+    }
+    res.json(song);
+  } catch (error) {
+    next(error);
+  }
+};

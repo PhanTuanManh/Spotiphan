@@ -1,3 +1,5 @@
+// frontend/src/pages/playlist/PlaylistPage.tsx
+
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { axiosInstance } from "@/lib/axios";

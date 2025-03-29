@@ -1,3 +1,5 @@
+// frontend/src/stores/usePlayerStore.ts
+
 import { create } from "zustand";
 import { ISong } from "@/types"; // Thay đổi từ Song sang ISong
 import { useChatStore } from "./useChatStore";

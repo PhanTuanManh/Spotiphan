@@ -1,6 +1,6 @@
-// src/components/FollowButton.tsx
+// frontend/src/components/FollowButton.tsx
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { axiosInstance as axios } from "@/lib/axios";
 import { Button } from "@/components/ui/button";
@@ -9,49 +9,53 @@ import toast from "react-hot-toast";
 export const FollowButton = ({
   userId,
   initialIsFollowing,
-  followersCount,
-  onFollowChange,
+  followersCount: initialFollowersCount,
 }: {
   userId: string;
   initialIsFollowing: boolean;
   followersCount: number;
-  onFollowChange?: (newState: boolean, newCount: number) => void;
 }) => {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentFollowersCount, setFollowersCount] = useState(followersCount);
+  const [followersCount, setFollowersCount] = useState(initialFollowersCount);
   const { user } = useAuthStore();
 
   const handleFollow = async () => {
-    if (!user) return;
+    if (!user) {
+      toast.error("Please log in to follow users");
+      return;
+    }
 
     setIsLoading(true);
     try {
       if (isFollowing) {
-        await axios.delete(`/users/${userId}/unfollow`);
+        // Unfollow
+        await axios.delete(`/users/${userId}/follow`);
         setIsFollowing(false);
         setFollowersCount((prev) => prev - 1);
-        onFollowChange?.(false, currentFollowersCount - 1);
         toast.success("Unfollowed successfully");
       } else {
+        // Follow
         await axios.post(`/users/${userId}/follow`);
         setIsFollowing(true);
         setFollowersCount((prev) => prev + 1);
-        onFollowChange?.(true, currentFollowersCount + 1);
         toast.success("Followed successfully");
       }
-    } catch (error) {
-      toast.error("Operation failed. Please try again.");
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Operation failed. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (user?._id === userId) return null;
+  if (!user || user._id === userId) return null;
 
   return (
     <div className="flex items-center gap-2">
       <Button
+        className="rounded-full bg-transparent text-white border border-white hover:bg-transparent hover:scale-105"
         variant={isFollowing ? "outline" : "default"}
         size="sm"
         onClick={handleFollow}
@@ -65,8 +69,7 @@ export const FollowButton = ({
         )}
       </Button>
       <span className="text-sm text-muted-foreground">
-        {currentFollowersCount}{" "}
-        {currentFollowersCount === 1 ? "follower" : "followers"}
+        {followersCount} {followersCount === 1 ? "follower" : "followers"}
       </span>
     </div>
   );

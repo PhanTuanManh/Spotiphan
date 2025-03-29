@@ -14,6 +14,7 @@ import {
   getFeaturedSongs,
   getLatestSingles,
   getMadeForYouSongs,
+  getSingleSong,
   getTrendingSongs,
 } from "../controller/song.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
@@ -69,5 +70,6 @@ router.get("/singles/lastest", getLatestSingles);
 router.get("/featured", getFeaturedSongs);
 router.get("/made-for-you", getMadeForYouSongs);
 router.get("/trending", getTrendingSongs);
+router.get("/:songId", getSingleSong);
 
 export default router;

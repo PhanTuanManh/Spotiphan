@@ -1,9 +1,9 @@
-// src/stores/useMusicStore.ts
+// frontend/src/stores/useMusicStore.ts
 
 import { axiosInstance } from "@/lib/axios";
 import {
-  IAlbum,
   IPlaylist,
+  IAlbum,
   IQueue,
   ISong,
   IStats,
@@ -14,12 +14,12 @@ import { create } from "zustand";
 import { useChatStore } from "./useChatStore";
 
 interface MusicStore {
-  songs: ISong[];
   playlists: IPlaylist[];
+  songs: ISong[];
   albums: IAlbum[];
   isLoading: boolean;
-  error: string | null;
   currentPlaylist: IPlaylist | null;
+  error: string | null;
   currentAlbum: IAlbum | null;
   featuredSongs: ISong[];
   madeForYouSongs: ISong[];
@@ -42,6 +42,7 @@ interface MusicStore {
   deleteSong: (id: string) => Promise<void>;
   toggleLikeSong: (songId: string, userId: string) => void; // Không cần async nữa
   fetchPlaylists: () => Promise<void>; // Thêm hàm lấy danh sách playlist
+  fetchSongById: (id: string) => Promise<void>; // Thêm hàm lấy chi tiết playlist
   fetchPlaylistById: (id: string) => Promise<void>; // Thêm hàm lấy chi tiết playlist
 }
 
@@ -251,6 +252,18 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
     try {
       const response = await axiosInstance.get(`/queue/${userId}`);
       set({ userQueue: response.data.songs });
+    } catch (error: any) {
+      set({ error: error.message });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  fetchSongById: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.get(`/songs/${id}`);
+      set({ currentSong: response.data });
     } catch (error: any) {
       set({ error: error.message });
     } finally {

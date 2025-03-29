@@ -13,6 +13,7 @@ import ArtistPage from "./pages/artist/ArtistPage";
 import PlaylistPage from "./pages/playlist/PlaylistPage";
 import { Search } from "lucide-react";
 import SearchPage from "./pages/search/SearchPage";
+import SinglePage from "./pages/single/SinglePage";
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/albums/:albumId" element={<AlbumPage />} />
           <Route path="/playlists/:playlistId" element={<PlaylistPage />} />
+          <Route path="/single/:songId" element={<SinglePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

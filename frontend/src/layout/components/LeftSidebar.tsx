@@ -1,3 +1,5 @@
+// frontend/src/layout/components/LeftSidebar.tsx
+
 import { useRef, useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { SignedIn, useUser } from "@clerk/clerk-react";

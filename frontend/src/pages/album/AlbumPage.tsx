@@ -1,4 +1,4 @@
-// src/pages/album/AlbumPage.tsx
+// frontend/src/pages/album/AlbumPage.tsx
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";

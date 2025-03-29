@@ -1,11 +1,16 @@
+// src/pages/home/components/FeaturedSection.tsx
+
 import { useEffect, useState } from "react";
 import { useMusicStore } from "@/stores/useMusicStore";
 import FeaturedGridSkeleton from "@/components/skeletons/FeaturedGridSkeleton";
 import PlayButton from "./PlayButton";
 import { axiosInstance } from "@/lib/axios"; // Import axiosInstance để gọi API
+import { Card } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
 
 const FeaturedSection = () => {
   const { isLoading, featuredSongs } = useMusicStore();
+  const navigate = useNavigate();
   const [artistNames, setArtistNames] = useState<{ [key: string]: string }>({}); // Lưu tên nghệ sĩ
   const [loadingArtists, setLoadingArtists] = useState<boolean>(false); // Trạng thái loading
 
@@ -45,6 +50,9 @@ const FeaturedSection = () => {
   }, [featuredSongs]);
 
   if (isLoading || loadingArtists) return <FeaturedGridSkeleton />;
+  const handleSongClick = (songId: string) => {
+    navigate(`/single/${songId}`);
+  };
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
@@ -52,8 +60,11 @@ const FeaturedSection = () => {
         const artistName = artistNames[song.artist] || ""; // Lấy tên nghệ sĩ từ artistNames
 
         return (
-          <div
+          <Card
             key={song._id}
+            onClick={() => {
+              handleSongClick(song._id);
+            }}
             className="flex items-center bg-zinc-800/50 rounded-md overflow-hidden
            hover:bg-zinc-700/50 transition-colors group cursor-pointer relative">
             <img
@@ -69,7 +80,7 @@ const FeaturedSection = () => {
               {/* Hiển thị tên nghệ sĩ */}
             </div>
             <PlayButton song={song} />
-          </div>
+          </Card>
         );
       })}
     </div>

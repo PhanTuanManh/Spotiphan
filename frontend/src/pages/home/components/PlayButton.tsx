@@ -1,3 +1,5 @@
+// frontend/src/pages/home/components/PlayButton.tsx
+
 import { Button } from "@/components/ui/button";
 import { usePlayerStore } from "@/stores/usePlayerStore";
 import { ISong } from "@/types"; // Thay đổi từ Song sang ISong

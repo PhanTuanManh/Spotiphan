@@ -1,4 +1,4 @@
-// src/pages/chat/components/UsersList.tsx
+// frontend/src/pages/chat/components/UsersList.tsx
 
 import UsersListSkeleton from "@/components/skeletons/UsersListSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

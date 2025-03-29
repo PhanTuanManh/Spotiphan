@@ -1,3 +1,5 @@
+// frontend/src/layout/components/AudioPlayer.tsx
+
 import { usePlayerStore } from "@/stores/usePlayerStore";
 import { useEffect, useRef } from "react";
 

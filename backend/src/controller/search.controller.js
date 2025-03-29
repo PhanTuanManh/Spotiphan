@@ -93,6 +93,11 @@ export const searchAll = async (req, res, next) => {
         Playlist.find({
           $and: [{ name: searchRegex }, { isPublic: true }],
         })
+          .populate({
+            path: "userId",
+            select: "fullName imageUrl",
+            model: "User",
+          })
           .populate("songs")
           .skip(skip)
           .limit(parseInt(limit))
@@ -108,6 +113,12 @@ export const searchAll = async (req, res, next) => {
         name: playlist.name,
         imageUrl: playlist.imageUrl,
         songCount: playlist.songs?.length || 0,
+        userId: {
+          // Đảm bảo cấu trúc này khớp với interface
+          _id: playlist.userId?._id,
+          fullName: playlist.userId?.fullName || "Unknown",
+          imageUrl: playlist.userId?.imageUrl,
+        },
       }));
 
       totals.playlists = totalPlaylists;

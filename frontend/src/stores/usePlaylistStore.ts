@@ -1,3 +1,5 @@
+// frontend/src/stores/usePlaylistStore.ts
+
 import { axiosInstance } from "@/lib/axios"; // Đảm bảo axiosInstance đã được cấu hình
 import { IPlaylist } from "@/types"; // Đảm bảo kiểu dữ liệu từ types/index.ts
 import toast from "react-hot-toast";

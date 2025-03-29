@@ -1,4 +1,4 @@
-// src/pages/chat/components/ChatHeader.tsx
+// frontend/src/pages/chat/components/ChatHeader.tsx
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useChatStore } from "@/stores/useChatStore";

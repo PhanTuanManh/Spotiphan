@@ -1,4 +1,4 @@
-// src/types/index.ts
+// frontend/src/types/index.ts
 
 //remove comments
 export interface BaseModel {
@@ -74,7 +74,11 @@ export interface IPayment extends BaseModel {
 // ===== Playlist =====
 export interface IPlaylist extends BaseModel {
   name: string;
-  userId: string;
+  userId: {
+    _id: string;
+    fullName: string;
+    imageUrl?: string;
+  }; // Thay đổi từ string sang object
   imageUrl: string;
   songs: { _id: string; title: string }[]; // mảng song id
   isPublic: boolean;

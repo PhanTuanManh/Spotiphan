@@ -1,13 +1,13 @@
 import { axiosInstance } from "@/lib/axios";
 import { IMessage, IUser } from "@/types";
 import { create } from "zustand";
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 
 interface ChatStore {
   users: IUser[];
   isLoading: boolean;
   error: string | null;
-  socket: any;
+  socket: Socket | null;
   isConnected: boolean;
   onlineUsers: Set<string>;
   userActivities: Map<string, string>;
@@ -15,13 +15,13 @@ interface ChatStore {
   selectedUser: IUser | null;
 
   fetchUsers: () => Promise<void>;
-  initSocket: (userId: string) => void;
+  initSocket: (userId: string) => Promise<void>; // Thay đổi thành async
   disconnectSocket: () => void;
   sendMessage: (
     receiverId: string,
     senderId: string,
     content: string
-  ) => Promise<void>;
+  ) => Promise<void>; // Thêm async
   fetchMessages: (userId: string) => Promise<void>;
   setSelectedUser: (user: IUser | null) => void;
 }
@@ -29,16 +29,11 @@ interface ChatStore {
 const baseURL =
   import.meta.env.MODE === "development" ? "http://localhost:5000" : "/";
 
-const socket = io(baseURL, {
-  autoConnect: false, // only connect if user is authenticated
-  withCredentials: true,
-});
-
 export const useChatStore = create<ChatStore>((set, get) => ({
   users: [],
   isLoading: false,
   error: null,
-  socket: socket,
+  socket: null,
   isConnected: false,
   onlineUsers: new Set(),
   userActivities: new Map(),
@@ -53,89 +48,90 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const response = await axiosInstance.get("/users");
       set({ users: response.data });
     } catch (error: any) {
-      set({ error: error.response.data.message });
+      set({ error: error.response?.data?.message || "Failed to fetch users" });
     } finally {
       set({ isLoading: false });
     }
   },
 
-  initSocket: (userId) => {
-    if (!get().isConnected) {
-      socket.auth = { userId };
-      socket.connect();
+  initSocket: async (userId) => {
+    const { socket, isConnected } = get();
+    if (isConnected && socket) return;
 
-      socket.emit("user_connected", userId);
+    return new Promise<void>((resolve) => {
+      const newSocket = io(baseURL, {
+        query: { userId },
+        withCredentials: true,
+        autoConnect: true,
+      });
 
-      socket.on("users_online", (users: string[]) => {
+      newSocket.on("connect", () => {
+        console.log("Socket connected");
+        set({ isConnected: true, socket: newSocket });
+        resolve();
+      });
+
+      newSocket.on("users_online", (users: string[]) => {
         set({ onlineUsers: new Set(users) });
       });
 
-      socket.on("activities", (activities: [string, string][]) => {
+      newSocket.on("activities", (activities: [string, string][]) => {
         set({ userActivities: new Map(activities) });
       });
 
-      socket.on("user_connected", (userId: string) => {
-        set((state) => ({
-          onlineUsers: new Set([...state.onlineUsers, userId]),
-        }));
-      });
-
-      socket.on("user_disconnected", (userId: string) => {
-        set((state) => {
-          const newOnlineUsers = new Set(state.onlineUsers);
-          newOnlineUsers.delete(userId);
-          return { onlineUsers: newOnlineUsers };
-        });
-      });
-
-      socket.on("receive_message", (message: IMessage) => {
+      newSocket.on("receive_message", (message: IMessage) => {
         set((state) => ({
           messages: [...state.messages, message],
         }));
       });
 
-      socket.on("message_sent", (message: IMessage) => {
+      newSocket.on("message_sent", (message: IMessage) => {
         set((state) => ({
-          messages: Array.isArray(state.messages)
-            ? [...state.messages, message]
-            : [message], // ✅ Luôn đảm bảo `messages` là mảng
+          messages: [...state.messages, message],
         }));
       });
 
-      socket.on("activity_updated", ({ userId, activity }) => {
-        set((state) => {
-          const newActivities = new Map(state.userActivities);
-          newActivities.set(userId, activity);
-          return { userActivities: newActivities };
-        });
+      newSocket.on("disconnect", () => {
+        set({ isConnected: false });
       });
 
-      set({ isConnected: true });
-    }
+      set({ socket: newSocket });
+    });
   },
 
   disconnectSocket: () => {
-    if (get().isConnected) {
+    const socket = get().socket;
+    if (socket) {
       socket.disconnect();
-      set({ isConnected: false });
+      set({ isConnected: false, socket: null });
     }
   },
 
   sendMessage: async (receiverId, senderId, content) => {
-    const socket = get().socket;
-    if (!socket) return;
+    const { socket, isConnected } = get();
 
-    // ✅ Giữ nguyên `clerkId`, giống code cũ
-    socket.emit("send_message", { receiverId, senderId, content });
+    if (!isConnected || !socket) {
+      // Tự động kết nối nếu chưa kết nối
+      await get().initSocket(senderId);
+    }
+
+    // Kiểm tra lại sau khi init
+    if (get().socket && get().isConnected) {
+      get().socket!.emit("send_message", { receiverId, senderId, content });
+    } else {
+      throw new Error("Cannot connect to socket server");
+    }
   },
 
   fetchMessages: async (userId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(`/users/${userId}/messages/`);
-      set({ messages: Array.isArray(response.data) ? response.data : [] }); // ✅ Luôn set messages là mảng
+      const response = await axiosInstance.get(`/users/messages/${userId}`);
+      set({ messages: response.data });
     } catch (error: any) {
-      set({ error: error.response.data.message, messages: [] }); // ✅ Nếu lỗi, vẫn đảm bảo messages là mảng
+      set({
+        error: error.response?.data?.message || "Failed to fetch messages",
+      });
     } finally {
       set({ isLoading: false });
     }

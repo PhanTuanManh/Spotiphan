@@ -37,6 +37,13 @@ const Topbar = () => {
       debounceTimer.current = setTimeout(() => {
         navigate(`/search?q=${encodeURIComponent(query)}`);
       }, 500);
+    } else {
+      // Thêm trường hợp khi query rỗng
+      debounceTimer.current = setTimeout(() => {
+        if (window.location.pathname !== "/") {
+          navigate("/");
+        }
+      }, 500);
     }
   };
 
@@ -44,6 +51,10 @@ const Topbar = () => {
     setSearchQuery("");
     if (inputRef.current) {
       inputRef.current.focus();
+    }
+    // Thêm navigate về trang chủ ngay khi click X
+    if (window.location.pathname !== "/") {
+      navigate("/");
     }
   };
 
@@ -53,7 +64,9 @@ const Topbar = () => {
       <div className="flex items-center gap-4 flex-1">
         {/* Phần tử 1: Logo */}
         <div className="flex-shrink-0">
-          <img src="/spotify.png" className="size-8" alt="Spotify logo" />
+          <Link to="/">
+            <img src="/spotify.png" className="size-8" alt="Spotify logo" />
+          </Link>
         </div>
 
         {/* Phần tử 2: Search bar */}
@@ -67,7 +80,7 @@ const Topbar = () => {
               ref={inputRef}
               type="search"
               placeholder="What do you want to listen to?"
-              className="pl-10 pr-8 py-2 rounded-full w-full bg-zinc-800 border-none focus-visible:ring-2 focus-visible:ring-green-500 focus:bg-zinc-700 hover:bg-zinc-700 transition-all"
+              className="pl-10 pr-8 py-2 rounded-full w-full bg-zinc-800 border-none focus-visible:ring-2 focus-visible:ring-primary focus:bg-zinc-700 hover:bg-zinc-700 transition-all"
               value={searchQuery}
               onChange={handleSearchChange}
               onFocus={() => setIsSearchFocused(true)}

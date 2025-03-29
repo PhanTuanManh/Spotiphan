@@ -84,7 +84,7 @@ const MainLayout = () => {
 
             {/* right sidebar */}
             <ResizablePanel
-              defaultSize={20}
+              defaultSize={18}
               minSize={0}
               maxSize={25}
               collapsedSize={0}>

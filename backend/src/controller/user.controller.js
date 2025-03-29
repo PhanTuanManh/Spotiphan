@@ -1,10 +1,9 @@
 // backend/src/controllers/user.controller.js
 import mongoose from "mongoose";
-import { io } from "../lib/socket.js"; // WebSocket để gửi thông báo realtime
 import { Message } from "../models/message.model.js";
 import { Payment } from "../models/payment.model.js";
-import { User } from "../models/user.model.js";
 import { Song } from "../models/song.model.js";
+import { User } from "../models/user.model.js";
 
 // helper function for cloudinary uploads
 // const uploadToCloudinary = async (file) => {
@@ -221,8 +220,6 @@ export const followUser = async (req, res, next) => {
     await me.save();
     await user.save();
 
-    io.emit("new_follower", { userId: user._id, followerId: me._id });
-
     res.status(200).json({ message: "Followed successfully" });
   } catch (error) {
     next(error);
@@ -284,71 +281,21 @@ export const getPaymentHistory = async (req, res, next) => {
   }
 };
 
-/**
- * Get paginated messages between two users (optimized for chat apps)
- */
-
 export const getMessages = async (req, res, next) => {
   try {
-    const myClerkId = req.auth.userId; // Lấy ID của người gửi request từ Clerk
-    const { userId } = req.params; // Lấy ID của người nhận từ request params
+    const myId = req.auth.userId;
+    const { userId } = req.params;
 
-    let { limit = 20, lastMessageId } = req.query;
-    limit = parseInt(limit);
-
-    // 🔹 Truy vấn theo `clerkId` (KHÔNG dùng ObjectId nữa)
-    let query = {
+    const messages = await Message.find({
       $or: [
-        { senderId: myClerkId, receiverId: userId },
-        { senderId: userId, receiverId: myClerkId },
+        { senderId: userId, receiverId: myId },
+        { senderId: myId, receiverId: userId },
       ],
-    };
+    }).sort({ createdAt: 1 });
 
-    // Nếu có lastMessageId, lọc tin nhắn cũ hơn
-    if (lastMessageId) {
-      const lastMessage = await Message.findById(lastMessageId);
-      if (lastMessage) {
-        query.createdAt = { $lt: lastMessage.createdAt };
-      }
-    }
-
-    // 🔹 Lấy tin nhắn mới nhất trước
-    const messages = await Message.find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit);
-
-    res.status(200).json({
-      hasMore: messages.length === limit,
-      messages: messages.reverse(), // Hiển thị tin nhắn theo thứ tự từ cũ đến mới
-    });
+    res.status(200).json(messages);
   } catch (error) {
-    console.error("❌ Lỗi khi lấy tin nhắn:", error);
     next(error);
-  }
-};
-
-export const sendMessage = async (req, res, next) => {
-  try {
-    const { senderId, receiverId, content } = req.body;
-
-    // ✅ Tìm user bằng `clerkId` và lấy `_id` MongoDB
-    const sender = await User.findOne({ clerkId: senderId });
-    const receiver = await User.findOne({ clerkId: receiverId });
-
-    if (!sender || !receiver) {
-      return res.status(404).json({ error: "Người dùng không tồn tại" });
-    }
-
-    const message = await Message.create({
-      senderId: sender._id, // Sử dụng `_id` từ MongoDB thay vì `clerkId`
-      receiverId: receiver._id,
-      content,
-    });
-
-    res.status(201).json({ message });
-  } catch (error) {
-    console.error("❌ Lỗi khi lưu tin nhắn vào database:", error);
-    res.status(500).json({ error: "Lỗi server khi lưu tin nhắn" });
   }
 };
 
