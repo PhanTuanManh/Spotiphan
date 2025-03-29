@@ -1,9 +1,7 @@
-// frontend/src/pages/chat/ChatPage.tsx
-
 import Topbar from "@/components/Topbar";
 import { useChatStore } from "@/stores/useChatStore";
 import { useUser } from "@clerk/clerk-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import UsersList from "./components/UsersList";
 import ChatHeader from "./components/ChatHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,16 +19,29 @@ const formatTime = (date: string) => {
 const ChatPage = () => {
   const { user } = useUser();
   const { messages, selectedUser, fetchUsers, fetchMessages } = useChatStore();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto scroll to bottom when messages change
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
     if (user) fetchUsers();
   }, [fetchUsers, user]);
 
   useEffect(() => {
-    if (selectedUser) fetchMessages(selectedUser.clerkId);
+    if (selectedUser) {
+      fetchMessages(selectedUser.clerkId).then(() => {
+        // Scroll to bottom after messages are loaded
+        setTimeout(scrollToBottom, 100);
+      });
+    }
   }, [selectedUser, fetchMessages]);
-
-  console.log({ messages });
 
   return (
     <main className="h-full rounded-lg bg-gradient-to-b from-zinc-800 to-zinc-900 overflow-hidden">
@@ -65,9 +76,11 @@ const ChatPage = () => {
                       </Avatar>
 
                       <div
-                        className={`rounded-lg p-3 max-w-[70%]
-													${message.senderId === user?.id ? "bg-green-500" : "bg-zinc-800"}
-												`}>
+                        className={`rounded-lg p-3 max-w-[70%] ${
+                          message.senderId === user?.id
+                            ? "bg-green-500"
+                            : "bg-zinc-800"
+                        }`}>
                         <p className="text-sm">{message.content}</p>
                         <span className="text-xs text-zinc-300 mt-1 block">
                           {formatTime(message.createdAt)}
@@ -75,10 +88,11 @@ const ChatPage = () => {
                       </div>
                     </div>
                   ))}
+                  <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
 
-              <MessageInput />
+              <MessageInput onSend={scrollToBottom} />
             </>
           ) : (
             <NoConversationPlaceholder />
@@ -88,6 +102,7 @@ const ChatPage = () => {
     </main>
   );
 };
+
 export default ChatPage;
 
 const NoConversationPlaceholder = () => (

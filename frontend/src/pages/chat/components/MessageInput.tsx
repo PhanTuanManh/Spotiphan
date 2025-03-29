@@ -1,5 +1,3 @@
-// frontend/src/pages/chat/components/ChatPage.tsx
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useChatStore } from "@/stores/useChatStore";
@@ -13,7 +11,11 @@ type EmojiObject = {
   native: string;
 };
 
-const MessageInput = () => {
+interface MessageInputProps {
+  onSend: () => void;
+}
+
+const MessageInput = ({ onSend }: MessageInputProps) => {
   const [newMessage, setNewMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -27,9 +29,9 @@ const MessageInput = () => {
     try {
       await sendMessage(selectedUser.clerkId, user.id, newMessage.trim());
       setNewMessage("");
+      onSend(); // Gọi callback sau khi gửi thành công
     } catch (error) {
       console.error("Failed to send message:", error);
-      // Có thể thêm toast notification ở đây
     } finally {
       setIsSending(false);
     }
@@ -44,6 +46,7 @@ const MessageInput = () => {
       <div className="flex gap-2">
         <Button
           size="icon"
+          variant="ghost"
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
           😀
         </Button>
@@ -63,9 +66,9 @@ const MessageInput = () => {
         />
 
         <Button
-          size={"icon"}
+          size="icon"
           onClick={handleSend}
-          disabled={!newMessage.trim()}>
+          disabled={!newMessage.trim() || isSending}>
           <Send className="size-4" />
         </Button>
       </div>
