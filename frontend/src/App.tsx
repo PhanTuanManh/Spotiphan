@@ -8,10 +8,9 @@ import HomePage from "./pages/home/HomePage";
 
 import { Toaster } from "react-hot-toast";
 import NotFoundPage from "./pages/404/NotFoundPage";
-import ChatPage from "./pages/chat/ChatPage";
 import ArtistPage from "./pages/artist/ArtistPage";
+import ChatPage from "./pages/chat/ChatPage";
 import PlaylistPage from "./pages/playlist/PlaylistPage";
-import { Search } from "lucide-react";
 import SearchPage from "./pages/search/SearchPage";
 import SinglePage from "./pages/single/SinglePage";
 

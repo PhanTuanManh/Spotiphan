@@ -1,3 +1,5 @@
+// frontend/src/stores/useChatStore.ts
+
 import { axiosInstance } from "@/lib/axios";
 import { IMessage, IUser } from "@/types";
 import { create } from "zustand";
@@ -13,6 +15,9 @@ interface ChatStore {
   userActivities: Map<string, string>;
   messages: IMessage[];
   selectedUser: IUser | null;
+  currentPage: number;
+  hasMore: boolean;
+  isLoadingMore: boolean;
 
   fetchUsers: () => Promise<void>;
   initSocket: (userId: string) => Promise<void>; // Thay đổi thành async
@@ -24,6 +29,8 @@ interface ChatStore {
   ) => Promise<void>; // Thêm async
   fetchMessages: (userId: string) => Promise<void>;
   setSelectedUser: (user: IUser | null) => void;
+  loadMoreMessages: () => Promise<void>;
+  resetMessages: () => void;
 }
 
 const baseURL =
@@ -39,8 +46,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   userActivities: new Map(),
   messages: [],
   selectedUser: null,
-
-  setSelectedUser: (user) => set({ selectedUser: user }),
+  currentPage: 1,
+  hasMore: false,
+  isLoadingMore: false,
 
   fetchUsers: async () => {
     set({ isLoading: true, error: null });
@@ -124,10 +132,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   fetchMessages: async (userId: string) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, currentPage: 1 });
     try {
-      const response = await axiosInstance.get(`/users/messages/${userId}`);
-      set({ messages: response.data });
+      const response = await axiosInstance.get(`/users/messages/${userId}`, {
+        params: { page: 1, limit: 20 },
+      });
+      set({
+        messages: response.data.messages,
+        hasMore: response.data.hasMore,
+      });
     } catch (error: any) {
       set({
         error: error.response?.data?.message || "Failed to fetch messages",
@@ -135,5 +148,43 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  loadMoreMessages: async () => {
+    const { selectedUser, currentPage, hasMore, isLoadingMore } = get();
+    if (!selectedUser || !hasMore || isLoadingMore) return;
+
+    set({ isLoadingMore: true });
+    try {
+      const nextPage = currentPage + 1;
+      const response = await axiosInstance.get(
+        `/users/messages/${selectedUser.clerkId}`,
+        {
+          params: { page: nextPage, limit: 20 },
+        }
+      );
+
+      set((state) => ({
+        messages: [...response.data.messages, ...state.messages], // Thêm tin nhắn cũ vào đầu
+        currentPage: nextPage,
+        hasMore: response.data.hasMore,
+      }));
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || "Failed to load more messages",
+      });
+    } finally {
+      set({ isLoadingMore: false });
+    }
+  },
+
+  resetMessages: () => {
+    set({ messages: [], currentPage: 1, hasMore: false });
+  },
+
+  // Cập nhật hàm setSelectedUser để reset khi chọn user mới
+  setSelectedUser: (user) => {
+    get().resetMessages();
+    set({ selectedUser: user });
   },
 }));

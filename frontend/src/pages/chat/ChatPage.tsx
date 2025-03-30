@@ -1,7 +1,7 @@
 import Topbar from "@/components/Topbar";
 import { useChatStore } from "@/stores/useChatStore";
 import { useUser } from "@clerk/clerk-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import UsersList from "./components/UsersList";
 import ChatHeader from "./components/ChatHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,17 +18,84 @@ const formatTime = (date: string) => {
 
 const ChatPage = () => {
   const { user } = useUser();
-  const { messages, selectedUser, fetchUsers, fetchMessages } = useChatStore();
+  const {
+    messages,
+    selectedUser,
+    fetchUsers,
+    fetchMessages,
+    loadMoreMessages,
+    isLoadingMore,
+    hasMore,
+  } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<React.ElementRef<typeof ScrollArea>>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   // Auto scroll to bottom when messages change
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    if (!viewportRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = viewportRef.current;
+    const isNearTop = scrollTop < 100;
+
+    console.log("Scroll position:", {
+      scrollTop,
+      scrollHeight,
+      clientHeight,
+      isNearTop,
+    });
+
+    setIsScrolled(scrollTop > 20);
+
+    if (isNearTop && hasMore && !isLoadingMore) {
+      console.log("Loading more messages...");
+      const previousHeight = scrollHeight;
+
+      loadMoreMessages().then(() => {
+        if (!viewportRef.current) return;
+
+        // Maintain scroll position after loading
+        const newHeight = viewportRef.current.scrollHeight;
+        viewportRef.current.scrollTop = newHeight - previousHeight;
+      });
+    }
+  }, [hasMore, isLoadingMore, loadMoreMessages]);
 
   useEffect(() => {
-    scrollToBottom();
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const observer = new MutationObserver(() => {
+      handleScroll();
+    });
+
+    observer.observe(viewport, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, [handleScroll]);
+
+  useEffect(() => {
+    console.log("Messages updated:", messages.length);
   }, [messages]);
+
+  useEffect(() => {
+    console.log("HasMore updated:", hasMore);
+  }, [hasMore]);
+
+  useEffect(() => {
+    console.log("SelectedUser updated:", selectedUser?.clerkId);
+  }, [selectedUser]);
+
+  useEffect(() => {
+    if (!isScrolled) {
+      scrollToBottom("auto");
+    }
+  }, [messages, isScrolled, scrollToBottom]);
 
   useEffect(() => {
     if (user) fetchUsers();
@@ -37,11 +104,10 @@ const ChatPage = () => {
   useEffect(() => {
     if (selectedUser) {
       fetchMessages(selectedUser.clerkId).then(() => {
-        // Scroll to bottom after messages are loaded
-        setTimeout(scrollToBottom, 100);
+        setTimeout(() => scrollToBottom("auto"), 100);
       });
     }
-  }, [selectedUser, fetchMessages]);
+  }, [selectedUser, fetchMessages, scrollToBottom]);
 
   return (
     <main className="h-full rounded-lg bg-gradient-to-b from-zinc-800 to-zinc-900 overflow-hidden">
@@ -50,15 +116,21 @@ const ChatPage = () => {
       <div className="grid lg:grid-cols-[300px_1fr] grid-cols-[80px_1fr] h-[calc(100vh-180px)]">
         <UsersList />
 
-        {/* chat message */}
         <div className="flex flex-col h-full">
           {selectedUser ? (
             <>
               <ChatHeader />
 
-              {/* Messages */}
-              <ScrollArea className="h-[calc(100vh-340px)]">
-                <div className="p-4 space-y-4">
+              <ScrollArea
+                ref={scrollAreaRef}
+                className="h-[calc(100vh-340px)]"
+                onScroll={handleScroll}>
+                <div ref={viewportRef} className="p-4 space-y-4">
+                  {isLoadingMore && (
+                    <div className="flex justify-center py-2">
+                      <Spinner size="sm" />
+                    </div>
+                  )}
                   {messages.map((message) => (
                     <div
                       key={message._id}
@@ -104,6 +176,20 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
+
+const Spinner = ({ size = "md" }: { size?: "sm" | "md" | "lg" }) => {
+  const sizeClasses = {
+    sm: "size-4",
+    md: "size-6",
+    lg: "size-8",
+  };
+
+  return (
+    <div
+      className={`${sizeClasses[size]} animate-spin rounded-full border-2 border-zinc-500 border-t-transparent`}
+    />
+  );
+};
 
 const NoConversationPlaceholder = () => (
   <div className="flex flex-col items-center justify-center h-full space-y-6">

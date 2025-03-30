@@ -23,7 +23,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (userId) {
           // Đồng bộ user với backend
           await loadUser(userId);
-
           // Khởi tạo socket connection
           initSocket(userId, getToken);
         } else {

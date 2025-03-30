@@ -281,24 +281,42 @@ export const getPaymentHistory = async (req, res, next) => {
   }
 };
 
+// backend/src/controllers/user.controller.js
 export const getMessages = async (req, res, next) => {
   try {
     const myId = req.auth.userId;
     const { userId } = req.params;
+    const { page = 1, limit = 20 } = req.query; // Thêm tham số phân trang
+
+    const skip = (page - 1) * limit;
 
     const messages = await Message.find({
       $or: [
         { senderId: userId, receiverId: myId },
         { senderId: myId, receiverId: userId },
       ],
-    }).sort({ createdAt: 1 });
+    })
+      .sort({ createdAt: -1 }) // Sắp xếp mới nhất trước để phân trang
+      .skip(skip)
+      .limit(parseInt(limit));
 
-    res.status(200).json(messages);
+    // Đếm tổng số tin nhắn để client biết còn tin nhắn cũ không
+    const totalMessages = await Message.countDocuments({
+      $or: [
+        { senderId: userId, receiverId: myId },
+        { senderId: myId, receiverId: userId },
+      ],
+    });
+
+    res.status(200).json({
+      messages: messages.reverse(), // Đảo ngược để hiển thị từ cũ đến mới
+      hasMore: page * limit < totalMessages,
+      totalMessages,
+    });
   } catch (error) {
     next(error);
   }
 };
-
 /**
  * Update user's subscription plan
  */
