@@ -1,3 +1,4 @@
+// backend/src/lib/socket.js
 import { Server } from "socket.io";
 import { Message } from "../models/message.model.js";
 
@@ -15,27 +16,20 @@ export const initializeSocket = (server) => {
   io.on("connection", (socket) => {
     console.log("New client connected");
 
-    // Thêm middleware đơn giản để xác thực qua query params
-    const { userId } = socket.handshake.query;
-    if (!userId) {
-      console.log("No userId provided - disconnecting");
+    const { clerkId } = socket.handshake.query; // Đổi thành clerkId
+    if (!clerkId) {
+      console.log("No clerkId provided - disconnecting");
       return socket.disconnect();
     }
 
-    socket.userId = userId;
-    userSockets.set(userId, socket.id);
-    userActivities.set(userId, "Online");
+    socket.clerkId = clerkId; // Lưu clerkId
+    userSockets.set(clerkId, socket.id);
+    userActivities.set(clerkId, "Online");
 
     // Gửi thông tin user mới kết nối
-    io.emit("user_connected", userId);
+    io.emit("user_connected", clerkId);
     socket.emit("users_online", Array.from(userSockets.keys()));
     io.emit("activities", Array.from(userActivities.entries()));
-
-    socket.on("update_activity", ({ userId, activity }) => {
-      console.log("activity updated", userId, activity);
-      userActivities.set(userId, activity);
-      io.emit("activity_updated", { userId, activity });
-    });
 
     socket.on("send_message", async (data) => {
       try {
@@ -68,6 +62,18 @@ export const initializeSocket = (server) => {
         console.error("Message error:", error);
         socket.emit("message_error", error.message);
       }
+    });
+
+    socket.on("update_activity", ({ userId, activity }) => {
+      console.log("activity updated received from client:", userId, activity);
+      if (!userId || !activity) {
+        console.error("Invalid activity update:", { userId, activity });
+        return;
+      }
+
+      userActivities.set(userId, activity);
+      console.log("Broadcasting activity update to all clients");
+      io.emit("activity_updated", { userId, activity });
     });
 
     socket.on("disconnect", () => {

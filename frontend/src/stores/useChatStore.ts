@@ -62,29 +62,57 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
-  initSocket: async (userId) => {
+  initSocket: async (clerkId) => {
     const { socket, isConnected } = get();
     if (isConnected && socket) return;
 
     return new Promise<void>((resolve) => {
       const newSocket = io(baseURL, {
-        query: { userId },
+        query: { clerkId }, // Sử dụng clerkId
         withCredentials: true,
         autoConnect: true,
       });
 
       newSocket.on("connect", () => {
-        console.log("Socket connected");
+        console.log("Socket connected with clerkId:", clerkId);
         set({ isConnected: true, socket: newSocket });
+        newSocket.emit("user_connected", clerkId); // Gửi clerkId
         resolve();
       });
 
       newSocket.on("users_online", (users: string[]) => {
+        console.log("Online users updated:", users);
         set({ onlineUsers: new Set(users) });
       });
 
       newSocket.on("activities", (activities: [string, string][]) => {
         set({ userActivities: new Map(activities) });
+      });
+
+      newSocket.on("user_connected", (userId: string) => {
+        console.log("User connected:", userId);
+        set((state) => ({
+          onlineUsers: new Set([...state.onlineUsers, userId]),
+        }));
+      });
+
+      newSocket.on("activity_updated", ({ userId, activity }) => {
+        console.log("Activity updated received:", userId, activity);
+        set((state) => {
+          const newActivities = new Map(state.userActivities);
+          newActivities.set(userId, activity);
+          console.log("Updated activities:", newActivities);
+          return { userActivities: newActivities };
+        });
+      });
+
+      newSocket.on("user_disconnected", (userId: string) => {
+        console.log("User disconnected:", userId);
+        set((state) => {
+          const newOnlineUsers = new Set(state.onlineUsers);
+          newOnlineUsers.delete(userId);
+          return { onlineUsers: newOnlineUsers };
+        });
       });
 
       newSocket.on("receive_message", (message: IMessage) => {
