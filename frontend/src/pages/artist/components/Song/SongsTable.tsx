@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useSongStore } from "@/stores/useSongStore";
-import { ISong, Song } from "@/types";
+import { ISong } from "@/types";
 import { Archive, PackageOpen, RefreshCcw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import UpdateSongDialog from "./UpdateSongDialog";
@@ -40,8 +40,8 @@ const removeDiacritics = (str: string) => {
 };
 
 const SongsTable = () => {
-  const { user_id } = useAuthStore();
-  const artistId = user_id;
+  const { userId } = useAuthStore();
+  const artistId = userId;
   const {
     songsByArtist,
     isLoading,

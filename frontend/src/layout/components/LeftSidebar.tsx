@@ -118,7 +118,7 @@ const LeftSidebar = () => {
     if (!isLoggedIn) {
       setShowSignInModal(true); // Show sign in modal immediately
     } else if (isFreeUser) {
-      navigate("/subscriptionPlan");
+      navigate("/subscriptionPlans");
     } else {
       setIsCreatingPlaylist(true);
     }
@@ -358,9 +358,11 @@ const LeftSidebar = () => {
       {/* Library section */}
       <div className="flex-1 rounded-lg bg-zinc-900 p-4">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center text-white px-2">
-            <Library className="size-5 mr-2" />
-            <span className="hidden md:inline">Library</span>
+          <div className="flex items-center text-white px-2 w-full justify-between">
+            <div className="flex items-center">
+              <Library className="size-5 mr-2" />
+              <span className="hidden md:inline">Library</span>
+            </div>
             {isPremium && (
               <Dialog
                 open={isCreatingPlaylist}

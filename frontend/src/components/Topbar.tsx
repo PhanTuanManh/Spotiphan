@@ -2,7 +2,7 @@
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { SignedOut, UserButton } from "@clerk/clerk-react";
-import { LayoutDashboardIcon, SearchIcon, XIcon } from "lucide-react";
+import { LayoutDashboardIcon, Rocket, SearchIcon, XIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import SignInRegisterModal from "./SignInOAuthButtons";
 import { buttonVariants } from "./ui/button";
@@ -16,6 +16,7 @@ const Topbar = () => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceTimer = useRef<NodeJS.Timeout>();
+  console.log("Topbar role:", role);
 
   useEffect(() => {
     return () => {
@@ -114,6 +115,14 @@ const Topbar = () => {
             className={cn(buttonVariants({ variant: "outline" }))}>
             <LayoutDashboardIcon className="size-4 mr-2" />
             Artist Dashboard
+          </Link>
+        )}
+        {role === "free" && (
+          <Link
+            to={"/subscriptionPlans"}
+            className={cn(buttonVariants({ variant: "outline" }))}>
+            <Rocket className="size-4 mr-2" />
+            Premium
           </Link>
         )}
 

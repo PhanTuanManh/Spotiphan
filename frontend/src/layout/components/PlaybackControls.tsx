@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { axiosInstance } from "@/lib/axios";
 import { usePlayerStore } from "@/stores/usePlayerStore";
 import {
   Laptop2,
@@ -26,6 +27,26 @@ const formatTime = (seconds: number) => {
 export const PlaybackControls = () => {
   const { currentSong, isPlaying, togglePlay, playNext, playPrevious } =
     usePlayerStore();
+
+  const [artistNames, setArtistNames] = useState<Record<string, string>>({});
+
+  const fetchArtistName = async (artistId: string) => {
+    try {
+      const response = await axiosInstance.get(`/users/${artistId}`);
+      return response.data.fullName || "Unknown Artist";
+    } catch (error) {
+      console.error("Failed to fetch artist name:", error);
+      return "Unknown Artist";
+    }
+  };
+
+  useEffect(() => {
+    if (currentSong?.artist && !artistNames[currentSong.artist]) {
+      fetchArtistName(currentSong.artist).then((name) => {
+        setArtistNames((prev) => ({ ...prev, [currentSong.artist]: name }));
+      });
+    }
+  }, [currentSong?.artist]);
 
   const [volume, setVolume] = useState(75);
   const [currentTime, setCurrentTime] = useState(0);
@@ -72,7 +93,7 @@ export const PlaybackControls = () => {
 
   return (
     <footer className="h-20 sm:h-24 bg-zinc-900 border-t border-zinc-800 px-4">
-      <div className="flex justify-between items-center h-full max-w-[1800px] mx-auto">
+      <div className="flex justify-between items-center h-full w-full">
         {/* currently playing song */}
         <div className="hidden sm:flex items-center gap-4 min-w-[180px] w-[30%]">
           {currentSong && (
@@ -87,7 +108,9 @@ export const PlaybackControls = () => {
                   {currentSong.title}
                 </div>
                 <div className="text-sm text-zinc-400 truncate hover:underline cursor-pointer">
-                  {currentSong.artist} {/* artist là string */}
+                  {currentSong?.artist
+                    ? artistNames[currentSong.artist] || "Loading..."
+                    : "Unknown Artist"}
                 </div>
               </div>
             </>

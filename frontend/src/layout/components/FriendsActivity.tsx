@@ -63,6 +63,15 @@ const FriendsActivity = () => {
     if (user) {
       fetchUsers();
       initSocket(user.id);
+
+      // Add cleanup function
+      return () => {
+        const { socket } = useChatStore.getState();
+        if (socket) {
+          socket.emit("manual_disconnect", user.id); // Tell server we're disconnecting
+          socket.disconnect();
+        }
+      };
     }
   }, [fetchUsers, user, initSocket]);
 

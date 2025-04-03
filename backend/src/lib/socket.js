@@ -77,11 +77,11 @@ export const initializeSocket = (server) => {
     });
 
     socket.on("disconnect", () => {
-      if (socket.userId) {
-        userSockets.delete(socket.userId);
-        userActivities.delete(socket.userId);
-        io.emit("user_disconnected", socket.userId);
-        console.log(`User ${socket.userId} disconnected`);
+      if (socket.clerkId) {
+        userSockets.delete(socket.clerkId);
+        userActivities.delete(socket.clerkId);
+        io.emit("user_disconnected", socket.clerkId);
+        console.log(`User ${socket.clerkId} disconnected`);
       }
     });
   });

@@ -34,17 +34,9 @@ const SearchPage = () => {
   const query = new URLSearchParams(location.search).get("q") || "";
   const [searchResults, setSearchResults] = useState<SearchResults>({});
   const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuthStore();
   const { userId } = useAuth();
   const { likedSongs, toggleLikeSong } = useMusicStore();
-  const {
-    currentSong,
-    isPlaying,
-    playSong,
-    playAlbum,
-    playPlaylist,
-    togglePlay,
-  } = usePlayerStore();
+  const { currentSong, isPlaying, playAlbum, playPlaylist } = usePlayerStore();
 
   useEffect(() => {
     if (query) {
@@ -319,13 +311,17 @@ const SearchPage = () => {
                 </div>
               )}
 
-              {Object.keys(searchResults).length === 0 && !isLoading && (
-                <div className="text-center py-12">
-                  <p className="text-gray-400">
-                    No results found for "{query}"
-                  </p>
-                </div>
-              )}
+              {searchResults.songs?.length === 0 &&
+                searchResults.albums?.length === 0 &&
+                searchResults.playlists?.length === 0 &&
+                searchResults.users?.length === 0 &&
+                !isLoading && (
+                  <div className="text-center py-12">
+                    <p className="text-gray-400">
+                      No results found for "{query}"
+                    </p>
+                  </div>
+                )}
             </div>
           )}
         </div>
